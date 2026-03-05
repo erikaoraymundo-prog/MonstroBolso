@@ -95,6 +95,14 @@ export class BattleScene {
         this.particles = [];
         this.isPlayerAttacking = false;
 
+        this.screenShake = 0;
+        this.damageFlash = { player: 0, enemy: 0 };
+        this.targetHP = { player: playerMonster.currentStats.hp, enemy: enemyMonster.currentStats.hp };
+        this.displayHP = { player: playerMonster.currentStats.hp, enemy: enemyMonster.currentStats.hp };
+
+        this.typewriterIndex = 0;
+        this.displayedLog = "";
+
         this.setupInput();
     }
 
@@ -156,20 +164,15 @@ export class BattleScene {
         }
     }
 
-    isInside(x, y, rx, ry, rw, rh) {
-        return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
-    }
+    isInside(x, y, rx, ry, rw, rh) { return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh; }
 
-    openBagSection(section) {
-        this.currentBagSection = section;
-        this.state = "BAG_ITEMS";
-    }
+    openBagSection(section) { this.currentBagSection = section; this.state = "BAG_ITEMS"; }
 
     useItem(item) {
         if (item.qty <= 0) return;
-
         if (this.currentBagSection === "potions") {
             this.battle.usePotion(item);
+            this.targetHP.player = this.battle.player.currentStats.hp;
             item.qty--;
             this.playAnimation("Heal", true);
         } else if (this.currentBagSection === "capture") {
@@ -181,6 +184,9 @@ export class BattleScene {
 
     startPlayerTurn(moveName) {
         const move = this.battle.useMove(moveName, this.battle.player, this.battle.enemy);
+        this.targetHP.enemy = this.battle.enemy.currentStats.hp;
+        if (moveName === "Investida") this.screenShake = 15;
+        this.damageFlash.enemy = 20;
         this.playAnimation(move.animation, true);
     }
 
@@ -190,20 +196,27 @@ export class BattleScene {
         this.animationTimer = 60;
         this.isPlayerAttacking = isPlayerAttacking;
         this.particles = [];
-
-        if (name === 'RazorLeaf') {
-            for (let i = 0; i < 15; i++)
-                this.particles.push({ x: 150, y: 400, vx: 4 + Math.random() * 8, vy: -6 - Math.random() * 6 });
-        }
     }
 
     update(dt) {
+        // Smooth HP Bars
+        if (this.displayHP.player > this.targetHP.player) this.displayHP.player -= 0.5;
+        if (this.displayHP.enemy > this.targetHP.enemy) this.displayHP.enemy -= 0.5;
+        if (this.displayHP.player < this.targetHP.player) this.displayHP.player += 0.5;
+
+        if (this.screenShake > 0) this.screenShake -= 1;
+        if (this.damageFlash.player > 0) this.damageFlash.player -= 1;
+        if (this.damageFlash.enemy > 0) this.damageFlash.enemy -= 1;
+
         if (this.state === "ANIMATING") {
             this.animationTimer--;
             if (this.animationTimer <= 0) {
                 if (this.isPlayerAttacking && !this.battle.isFinished) {
                     setTimeout(() => {
                         this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
+                        this.targetHP.player = this.battle.player.currentStats.hp;
+                        this.screenShake = 10;
+                        this.damageFlash.player = 20;
                         this.playAnimation("Tackle", false);
                     }, 500);
                 } else if (this.battle.isFinished) {
@@ -217,24 +230,29 @@ export class BattleScene {
 
     render(ctx) {
         ctx.save();
+        if (this.screenShake > 0) {
+            ctx.translate((Math.random() - 0.5) * this.screenShake * 2, (Math.random() - 0.5) * this.screenShake * 2);
+        }
+
         this.drawBackground(ctx);
 
-        if (!this.battle.isFinished || this.battle.winner !== "enemy")
-            this.drawMonster(ctx, this.battle.player, 180, 420, true);
-        if (!this.battle.isFinished || this.battle.winner !== "player")
-            this.drawMonster(ctx, this.battle.enemy, 620, 180, false);
+        const idleBounce = Math.sin(Date.now() * 0.003) * 5;
 
-        // HP Bars (Premium Look)
+        if (!this.battle.isFinished || this.battle.winner !== "enemy")
+            this.drawMonster(ctx, this.battle.player, 180, 420 + idleBounce, true, this.damageFlash.player);
+        if (!this.battle.isFinished || this.battle.winner !== "player")
+            this.drawMonster(ctx, this.battle.enemy, 620, 180 + idleBounce, false, this.damageFlash.enemy);
+
+        // HP Bars
         this.drawUIBox(ctx, 450, 320, 320, 100);
         ctx.fillStyle = '#fff'; ctx.font = "bold 20px Outfit, Inter";
         ctx.fillText(this.battle.player.name, 475, 355);
-        this.drawHPBar(ctx, 475, 375, this.battle.player.currentStats.hp, this.battle.player.baseStats.hp);
+        this.drawHPBar(ctx, 475, 375, this.displayHP.player, this.battle.player.baseStats.hp);
 
         this.drawUIBox(ctx, 30, 40, 320, 100);
         ctx.fillText(this.battle.enemy.name, 55, 75);
-        this.drawHPBar(ctx, 55, 95, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
+        this.drawHPBar(ctx, 55, 95, this.displayHP.enemy, this.battle.enemy.baseStats.hp);
 
-        // Bottom Menu
         this.drawUIBox(ctx, 50, 450, 700, 120);
         if (this.state === "MAIN_MENU") this.drawMenu(ctx, this.menuOptions);
         else if (this.state === "MOVE_MENU") this.drawMoveMenu(ctx, this.moveOptions);
@@ -252,17 +270,14 @@ export class BattleScene {
             ctx.fillStyle = "rgba(255,255,255,0.08)";
             ctx.beginPath(); ctx.roundRect(x + 10, 460, 213, 100, 15); ctx.fill();
             ctx.fillStyle = "#fff"; ctx.font = "bold 22px Outfit, Inter";
-            ctx.textAlign = "center";
-            ctx.fillText(opt, x + 116, 520);
-            ctx.textAlign = "left";
+            ctx.textAlign = "center"; ctx.fillText(opt, x + 116, 520); ctx.textAlign = "left";
         });
     }
 
     drawMoveMenu(ctx, moves) {
         moves.forEach((move, i) => {
             const x = 100 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
-            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
-            ctx.fillText(move, x, y);
+            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter"; ctx.fillText(move, x, y);
         });
         ctx.fillText("Voltar", 450, 550);
     }
@@ -271,8 +286,7 @@ export class BattleScene {
         const items = Bag[this.currentBagSection] || [];
         items.forEach((item, i) => {
             const x = 100 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
-            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
-            ctx.fillText(`${item.name} x${item.qty}`, x, y);
+            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter"; ctx.fillText(`${item.name} x${item.qty}`, x, y);
         });
         ctx.fillText("Voltar", 450, 550);
     }
@@ -280,24 +294,39 @@ export class BattleScene {
     drawLog(ctx) {
         let y = 495;
         ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
-        this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 100, y); y += 30; });
-        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para sair)", 250, 555);
+        const currentLog = this.battle.log[this.battle.log.length - 1] || "";
+
+        // Typewriter logic
+        if (this.displayedLog !== currentLog) {
+            this.typewriterIndex += 0.5;
+            this.displayedLog = currentLog.substring(0, Math.floor(this.typewriterIndex));
+        } else {
+            this.typewriterIndex = currentLog.length;
+        }
+
+        // Show previous logs normally, last one with typewriter
+        this.battle.log.slice(-3, -1).forEach(msg => { ctx.fillText(msg, 100, y); y += 30; });
+        ctx.fillText(this.displayedLog, 100, y); y += 30;
+
+        if (this.battle.isFinished && this.displayedLog === currentLog)
+            ctx.fillText("(Clique em qualquer lugar para sair)", 250, 555);
     }
 
     drawAnimation(ctx) {
         ctx.save();
         if (this.animation === 'RazorLeaf') {
             ctx.fillStyle = "#58d68d";
-            this.particles.forEach(p => {
-                ctx.beginPath(); ctx.ellipse(p.x, p.y, 10, 5, Math.atan2(p.vy, p.vx), 0, Math.PI * 2); ctx.fill();
-            });
+            for (let i = 0; i < 10; i++) {
+                const p = (60 - this.animationTimer) / 60;
+                ctx.beginPath(); ctx.ellipse(180 + 440 * p + Math.sin(i) * 20, 420 - 240 * p + Math.cos(i) * 20, 10, 5, Math.PI / 4, 0, Math.PI * 2); ctx.fill();
+            }
         } else if (this.animation === 'Tackle') {
-            const offset = Math.sin(this.animationTimer * 0.8) * 20;
-            if (this.isPlayerAttacking) ctx.translate(offset, 0); else ctx.translate(-offset, 0);
+            const offset = Math.sin(this.animationTimer * 0.8) * 30;
+            if (this.isPlayerAttacking) ctx.translate(offset, -offset / 2); else ctx.translate(-offset, offset / 2);
         } else if (this.animation === 'Heal') {
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
-            const h = (60 - this.animationTimer) * 5;
-            ctx.fillRect(130, 450 - h, 100, 10);
+            const h = (Math.sin(Date.now() * 0.01) * 50) + 50;
+            ctx.fillRect(130, 420 - h, 100, 10);
         } else if (this.animation === 'Capture') {
             const progress = (60 - this.animationTimer) / 60;
             const x = 180 + (620 - 180) * progress;
@@ -313,43 +342,36 @@ export class BattleScene {
         const grd = ctx.createLinearGradient(0, 0, 0, 600);
         grd.addColorStop(0, "#85c1e9"); grd.addColorStop(0.5, "#d4e6f1"); grd.addColorStop(1, "#27ae60");
         ctx.fillStyle = grd; ctx.fillRect(0, 0, 800, 600);
-
-        // Battle Platforms
         ctx.fillStyle = "rgba(0,0,0,0.1)";
         ctx.beginPath(); ctx.ellipse(180, 450, 120, 40, 0, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.ellipse(620, 200, 100, 30, 0, 0, Math.PI * 2); ctx.fill();
     }
 
-    drawMonster(ctx, monster, x, y, back) {
+    drawMonster(ctx, monster, x, y, back, flash) {
         ctx.save(); ctx.translate(x, y);
+
+        if (flash > 0) {
+            ctx.filter = `brightness(${100 + flash * 5}%) sepia(100%) saturate(1000%) hue-rotate(-50deg)`;
+        }
+
+        const scale = 1 + Math.sin(Date.now() * 0.003) * 0.05;
+        ctx.scale(scale, 1 / scale);
+
         if (monster.name === 'Bulbasaur') {
-            // Bulb
             const bg = ctx.createRadialGradient(0, -35, 5, 0, -35, 30);
             bg.addColorStop(0, '#58d68d'); bg.addColorStop(1, '#1d8348');
             ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, -35, 30, 0, Math.PI * 2); ctx.fill();
-            // Body
             ctx.fillStyle = '#82e0aa'; ctx.beginPath(); ctx.ellipse(0, 0, 45, 35, 0, 0, Math.PI * 2); ctx.fill();
-            // Spots
             ctx.fillStyle = '#27ae60'; ctx.fillRect(-20, -10, 10, 10); ctx.fillRect(10, 5, 8, 8);
         } else {
-            // Body
             const cg = ctx.createLinearGradient(0, -50, 0, 50);
             cg.addColorStop(0, '#f39c12'); cg.addColorStop(1, '#e67e22');
             ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, 0, 35, 50, 0, 0, Math.PI * 2); ctx.fill();
-            // Tail
             ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.moveTo(20, 10); ctx.quadraticCurveTo(50, 30, 40, -40); ctx.lineTo(30, -30); ctx.fill();
-            // Flame
             ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(42, -45, 12, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(42, -45, 6, 0, Math.PI * 2); ctx.fill();
         }
-        // Eyes
-        ctx.fillStyle = '#fff';
-        if (!back) {
-            ctx.fillRect(-15, -20, 10, 12); ctx.fillRect(10, -20, 10, 12);
-            ctx.fillStyle = '#000'; ctx.fillRect(-12, -15, 4, 6); ctx.fillRect(13, -15, 4, 6);
-        } else {
-            // Back look
-        }
+        ctx.fillStyle = '#fff'; if (!back) { ctx.fillRect(-15, -20, 10, 12); ctx.fillRect(10, -20, 10, 12); ctx.fillStyle = '#000'; ctx.fillRect(-12, -15, 4, 6); ctx.fillRect(13, -15, 4, 6); }
         ctx.restore();
     }
 
@@ -367,7 +389,6 @@ export class BattleScene {
         const p = Math.max(0, curr / max);
         const color = p > 0.5 ? '#58d68d' : (p > 0.2 ? '#f4d03f' : '#ec7063');
         ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, 250 * p, 15, 7); ctx.fill();
-        // Inner detail
         ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(x, y, 250 * p, 4);
     }
 }

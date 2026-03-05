@@ -1,79 +1,68 @@
-export class AssetLoader {
-    constructor() {
-        this.assets = new Map();
-        this.toLoad = 0;
-        this.loaded = 0;
-    }
-
-    loadImage(key, src) {
-        this.toLoad++;
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                this.assets.set(key, img);
-                this.loaded++;
-                resolve(img);
-            };
-            img.onerror = reject;
-            img.src = src;
-        });
-    }
-
-    get(key) {
-        return this.assets.get(key);
-    }
-
-    get progress() {
-        return this.toLoad === 0 ? 1 : this.loaded / this.toLoad;
-    }
-}
-
 export class Engine {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
-        this.width = 800;
-        this.height = 600;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
-
-        this.lastTime = 0;
-        this.loader = new AssetLoader();
+        this.width = this.canvas.width = 800;
+        this.height = this.canvas.height = 600;
         this.scenes = new Map();
         this.currentScene = null;
-    }
-
-    async start() {
         this.lastTime = performance.now();
-        requestAnimationFrame((time) => this.loop(time));
+        this.transition = { active: false, opacity: 0, target: null, mode: 'fade' };
     }
 
-    loop(time) {
-        const deltaTime = (time - this.lastTime) / 1000;
-        this.lastTime = time;
-
-        this.update(deltaTime);
-        this.render();
-
-        requestAnimationFrame((t) => this.loop(t));
-    }
-
-    update(dt) {
-        if (this.currentScene) this.currentScene.update(dt);
-    }
-
-    render() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
-        if (this.currentScene) this.currentScene.render(this.ctx);
-    }
-
-    setScene(name) {
-        if (this.currentScene && this.currentScene.destroy) {
-            this.currentScene.destroy();
+    setScene(sceneName) {
+        if (this.currentScene) {
+            this.transition.active = true;
+            this.transition.opacity = 0;
+            this.transition.target = sceneName;
+            console.log(`Iniciando transição para: ${sceneName}`);
+        } else {
+            const nextScene = this.scenes.get(sceneName);
+            if (nextScene) {
+                this.currentScene = nextScene;
+                if (this.currentScene.init) this.currentScene.init();
+            }
         }
-        this.currentScene = this.scenes.get(name);
-        if (this.currentScene && this.currentScene.init) {
-            this.currentScene.init();
+    }
+
+    updateTransition() {
+        if (!this.transition.active) return;
+
+        if (this.transition.target) {
+            this.transition.opacity += 0.05;
+            if (this.transition.opacity >= 1) {
+                if (this.currentScene && this.currentScene.destroy) this.currentScene.destroy();
+                this.currentScene = this.scenes.get(this.transition.target);
+                if (this.currentScene && this.currentScene.init) this.currentScene.init();
+                this.transition.target = null;
+            }
+        } else {
+            this.transition.opacity -= 0.05;
+            if (this.transition.opacity <= 0) {
+                this.transition.active = false;
+                this.transition.opacity = 0;
+            }
         }
+    }
+
+    start() {
+        const loop = (time) => {
+            const dt = (time - this.lastTime) / 1000;
+            this.lastTime = time;
+
+            this.updateTransition();
+            if (this.currentScene) {
+                this.currentScene.update(dt);
+                this.currentScene.render(this.ctx);
+            }
+
+            if (this.transition.active) {
+                this.ctx.fillStyle = `rgba(0,0,0,${this.transition.opacity})`;
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
+
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     }
 }
