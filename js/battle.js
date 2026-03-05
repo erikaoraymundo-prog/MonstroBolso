@@ -1,11 +1,12 @@
 import { Abilities } from './data.js';
+import { Bag, GameState } from './bag.js';
 
 export class Battle {
     constructor(playerMonster, enemyMonster) {
         this.player = playerMonster;
         this.enemy = enemyMonster;
-        this.turnOrder = [];
         this.isFinished = false;
+        this.winner = null;
         this.log = [];
         this.moves = {
             "Folha navalha": { power: 55, type: 'Grass', animation: 'RazorLeaf' },
@@ -15,18 +16,12 @@ export class Battle {
     }
 
     init() {
-        this.determineTurnOrder();
         if (Abilities[this.player.ability]?.onBattleStart) {
             Abilities[this.player.ability].onBattleStart(this.player, this.enemy);
         }
         if (Abilities[this.enemy.ability]?.onBattleStart) {
             Abilities[this.enemy.ability].onBattleStart(this.enemy, this.player);
         }
-    }
-
-    determineTurnOrder() {
-        this.turnOrder = this.player.currentStats.speed >= this.enemy.currentStats.speed
-            ? [this.player, this.enemy] : [this.enemy, this.player];
     }
 
     useMove(moveName, attacker, target) {
@@ -39,11 +34,42 @@ export class Battle {
         this.log.push(`${attacker.name} used ${moveName}!`);
         if (damage > 0) this.log.push(`Dealt ${damage} damage.`);
 
-        if (target.currentStats.hp <= 0) {
-            this.log.push(`${target.name} fainted!`);
-            this.isFinished = true;
-        }
+        this.checkFainted();
         return move;
+    }
+
+    usePotion(potion) {
+        const oldHp = this.player.currentStats.hp;
+        this.player.currentStats.hp = Math.min(this.player.baseStats.hp, this.player.currentStats.hp + potion.heal);
+        const healed = this.player.currentStats.hp - oldHp;
+        this.log.push(`Used ${potion.name}! Healed ${healed} HP.`);
+    }
+
+    attemptCapture(block) {
+        const catchRate = (3 * this.enemy.baseStats.hp - 2 * this.enemy.currentStats.hp) * block.rate / (3 * this.enemy.baseStats.hp);
+        const success = Math.random() < catchRate || catchRate > 0.8;
+
+        if (success) {
+            this.log.push(`Gotcha! ${this.enemy.name} was caught!`);
+            GameState.addCapture(this.enemy.name);
+            this.isFinished = true;
+            this.winner = "player";
+        } else {
+            this.log.push(`Oh no! The monster broke free!`);
+        }
+        return success;
+    }
+
+    checkFainted() {
+        if (this.enemy.currentStats.hp <= 0) {
+            this.log.push(`${this.enemy.name} fainted!`);
+            this.isFinished = true;
+            this.winner = "player";
+        } else if (this.player.currentStats.hp <= 0) {
+            this.log.push(`${this.player.name} fainted!`);
+            this.isFinished = true;
+            this.winner = "enemy";
+        }
     }
 }
 
@@ -53,14 +79,20 @@ export class BattleScene {
         this.battle = new Battle(playerMonster, enemyMonster);
         this.battle.init();
 
-        this.state = "MAIN_MENU"; // MAIN_MENU, MOVE_MENU, ANIMATING, MESSAGE
+        this.state = "MAIN_MENU"; // MAIN_MENU, MOVE_MENU, BAG_SECTIONS, BAG_ITEMS, ANIMATING, MESSAGE
         this.menuOptions = ["Lutar", "Mochila", "Fugir"];
+        this.bagSections = [
+            { id: "capture", name: "Itens de Captura" },
+            { id: "potions", name: "Poções" },
+            { id: "battle_items", name: "Itens de Batalha" }
+        ];
+        this.currentBagSection = null;
         this.moveOptions = Object.keys(this.battle.moves);
-        this.currentSelection = 0;
 
         this.animation = null;
         this.animationTimer = 0;
         this.particles = [];
+        this.isPlayerAttacking = false;
 
         this.setupInput();
     }
@@ -80,24 +112,62 @@ export class BattleScene {
     }
 
     handleInput(x, y) {
-        if (this.state === "ANIMATING" || this.state === "MESSAGE") return;
+        if (this.state === "ANIMATING") return;
 
-        // Coordinates for buttons (based on UI box at 50, 450, 700, 120)
+        if (this.state === "MESSAGE" || this.battle.isFinished) {
+            this.engine.setScene('overworld');
+            return;
+        }
+
         if (this.state === "MAIN_MENU") {
             if (this.isInside(x, y, 50, 450, 233, 120)) this.state = "MOVE_MENU";
-            if (this.isInside(x, y, 283, 450, 233, 120)) this.engine.setScene('overworld'); // Should show bag UI
-            if (this.isInside(x, y, 516, 450, 233, 120)) this.engine.setScene('overworld');
-        } else if (this.state === "MOVE_MENU") {
-            // Simplified: top-left, top-right, bottom-left
-            if (this.isInside(x, y, 80, 470, 300, 40)) this.startPlayerTurn("Folha navalha");
-            if (this.isInside(x, y, 400, 470, 300, 40)) this.startPlayerTurn("Pó venenoso");
-            if (this.isInside(x, y, 80, 520, 300, 40)) this.startPlayerTurn("Investida");
-            if (this.isInside(x, y, 400, 520, 300, 40)) this.state = "MAIN_MENU"; // Back button
+            else if (this.isInside(x, y, 283, 450, 233, 120)) this.state = "BAG_SECTIONS";
+            else if (this.isInside(x, y, 516, 450, 233, 120)) this.engine.setScene('overworld');
+        }
+        else if (this.state === "MOVE_MENU") {
+            if (this.isInside(x, y, 80, 470, 300, 40)) this.startPlayerTurn(this.moveOptions[0]);
+            else if (this.isInside(x, y, 400, 470, 300, 40)) this.startPlayerTurn(this.moveOptions[1]);
+            else if (this.isInside(x, y, 80, 520, 300, 40)) this.startPlayerTurn(this.moveOptions[2]);
+            else if (this.isInside(x, y, 400, 520, 300, 40)) this.state = "MAIN_MENU";
+        }
+        else if (this.state === "BAG_SECTIONS") {
+            if (this.isInside(x, y, 80, 470, 300, 40)) this.openBagSection("capture");
+            else if (this.isInside(x, y, 400, 470, 300, 40)) this.openBagSection("potions");
+            else if (this.isInside(x, y, 80, 520, 300, 40)) this.openBagSection("battle_items");
+            else if (this.isInside(x, y, 400, 520, 300, 40)) this.state = "MAIN_MENU";
+        }
+        else if (this.state === "BAG_ITEMS") {
+            const items = Bag[this.currentBagSection];
+            items.forEach((item, i) => {
+                const ix = 80 + (i % 2 * 320);
+                const iy = 470 + (Math.floor(i / 2) * 50);
+                if (this.isInside(x, y, ix, iy, 300, 45)) this.useItem(item);
+            });
+            if (this.isInside(x, y, 400, 520, 300, 50)) this.state = "BAG_SECTIONS";
         }
     }
 
     isInside(x, y, rx, ry, rw, rh) {
         return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
+    }
+
+    openBagSection(section) {
+        this.currentBagSection = section;
+        this.state = "BAG_ITEMS";
+    }
+
+    useItem(item) {
+        if (item.qty <= 0) return;
+
+        if (this.currentBagSection === "potions") {
+            this.battle.usePotion(item);
+            item.qty--;
+            this.playAnimation("Heal", true);
+        } else if (this.currentBagSection === "capture") {
+            this.battle.attemptCapture(item);
+            item.qty--;
+            this.playAnimation("Capture", true);
+        }
     }
 
     startPlayerTurn(moveName) {
@@ -108,12 +178,13 @@ export class BattleScene {
     playAnimation(name, isPlayerAttacking) {
         this.state = "ANIMATING";
         this.animation = name;
-        this.animationTimer = 60; // 1 second roughly
+        this.animationTimer = 60;
         this.isPlayerAttacking = isPlayerAttacking;
         this.particles = [];
 
         if (name === 'RazorLeaf') {
-            for (let i = 0; i < 10; i++) this.particles.push({ x: 150, y: 400, vx: 5 + Math.random() * 5, vy: -5 - Math.random() * 10 });
+            for (let i = 0; i < 15; i++)
+                this.particles.push({ x: 150, y: 400, vx: 4 + Math.random() * 8, vy: -6 - Math.random() * 6 });
         }
     }
 
@@ -121,15 +192,17 @@ export class BattleScene {
         if (this.state === "ANIMATING") {
             this.animationTimer--;
             if (this.animation === 'RazorLeaf') {
-                this.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.5; });
+                this.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.4; });
             }
             if (this.animationTimer <= 0) {
                 if (this.isPlayerAttacking && !this.battle.isFinished) {
-                    // Enemy turn
                     setTimeout(() => {
                         this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
                         this.playAnimation("Tackle", false);
                     }, 500);
+                } else if (this.battle.isFinished) {
+                    this.state = "MESSAGE";
+                    this.destroy(); // Remove listener when finished
                 } else {
                     this.state = "MAIN_MENU";
                 }
@@ -139,29 +212,29 @@ export class BattleScene {
 
     render(ctx) {
         this.drawBackground(ctx);
-        this.drawMonster(ctx, this.battle.player, 150, 400, true);
-        this.drawMonster(ctx, this.battle.enemy, 600, 150, false);
+        if (!this.battle.isFinished || this.battle.winner !== "enemy")
+            this.drawMonster(ctx, this.battle.player, 150, 400, true);
+        if (!this.battle.isFinished || this.battle.winner !== "player")
+            this.drawMonster(ctx, this.battle.enemy, 600, 150, false);
 
-        // UI
+        // HP Bars
         this.drawUIBox(ctx, 450, 350, 300, 80);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(this.battle.player.name, 470, 380);
-        this.drawHPBar(ctx, 470, 395, this.battle.player.currentStats.hp, this.battle.player.baseStats.hp);
+        ctx.fillStyle = '#fff'; ctx.font = "bold 16px Inter";
+        ctx.fillText(this.battle.player.name, 470, 375);
+        this.drawHPBar(ctx, 470, 390, this.battle.player.currentStats.hp, this.battle.player.baseStats.hp);
 
         this.drawUIBox(ctx, 50, 50, 300, 80);
         ctx.fillStyle = '#fff';
-        ctx.fillText(this.battle.enemy.name, 70, 80);
-        this.drawHPBar(ctx, 70, 95, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
+        ctx.fillText(this.battle.enemy.name, 70, 75);
+        this.drawHPBar(ctx, 70, 90, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
 
-        // Menu / Log Box
+        // Bottom Menu
         this.drawUIBox(ctx, 50, 450, 700, 120);
-        if (this.state === "MAIN_MENU") {
-            this.drawMenu(ctx, ["Lutar", "Mochila", "Fugir"]);
-        } else if (this.state === "MOVE_MENU") {
-            this.drawMoveMenu(ctx, this.moveOptions);
-        } else {
-            this.drawLog(ctx);
-        }
+        if (this.state === "MAIN_MENU") this.drawMenu(ctx, this.menuOptions);
+        else if (this.state === "MOVE_MENU") this.drawMoveMenu(ctx, this.moveOptions);
+        else if (this.state === "BAG_SECTIONS") this.drawMenu(ctx, this.bagSections.map(s => s.name));
+        else if (this.state === "BAG_ITEMS") this.drawBagItems(ctx);
+        else this.drawLog(ctx);
 
         if (this.state === "ANIMATING") this.drawAnimation(ctx);
     }
@@ -169,38 +242,41 @@ export class BattleScene {
     drawMenu(ctx, options) {
         options.forEach((opt, i) => {
             const x = 50 + (i * 233);
-            ctx.fillStyle = "rgba(255,255,255,0.1)";
-            ctx.fillRect(x + 5, 455, 223, 110);
-            ctx.fillStyle = "#fff";
-            ctx.font = "20px Inter";
+            ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(x + 5, 455, 223, 110);
+            ctx.fillStyle = "#fff"; ctx.font = "20px Inter";
             ctx.fillText(opt, x + 80, 515);
         });
     }
 
     drawMoveMenu(ctx, moves) {
         moves.forEach((move, i) => {
-            const x = 80 + (i % 2 * 320);
-            const y = 490 + (Math.floor(i / 2) * 50);
+            const x = 80 + (i % 2 * 320); const y = 490 + (Math.floor(i / 2) * 45);
             ctx.fillText(move, x, y);
         });
-        ctx.fillText("Voltar", 400, 540);
+        ctx.fillText("Voltar", 400, 535);
+    }
+
+    drawBagItems(ctx) {
+        const items = Bag[this.currentBagSection] || [];
+        items.forEach((item, i) => {
+            const x = 80 + (i % 2 * 320); const y = 490 + (Math.floor(i / 2) * 45);
+            ctx.fillText(`${item.name} x${item.qty}`, x, y);
+        });
+        ctx.fillText("Voltar", 400, 535);
     }
 
     drawLog(ctx) {
         let y = 490;
-        this.battle.log.slice(-3).forEach(msg => {
-            ctx.fillText(msg, 80, y);
-            y += 25;
-        });
+        ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
+        this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 80, y); y += 25; });
+        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para sair)", 250, 555);
     }
 
     drawAnimation(ctx) {
         if (this.animation === 'RazorLeaf') {
             ctx.fillStyle = "#2ecc71";
             this.particles.forEach(p => {
-                ctx.beginPath();
-                ctx.ellipse(p.x, p.y, 10, 5, Math.atan2(p.vy, p.vx), 0, Math.PI * 2);
-                ctx.fill();
+                ctx.beginPath(); ctx.ellipse(p.x, p.y, 8, 4, Math.atan2(p.vy, p.vx), 0, Math.PI * 2); ctx.fill();
             });
         } else if (this.animation === 'PoisonPowder') {
             ctx.fillStyle = "rgba(155, 89, 182, 0.6)";
@@ -210,24 +286,24 @@ export class BattleScene {
                 ctx.fill();
             }
         } else if (this.animation === 'Tackle') {
-            if (this.animationTimer > 40) {
-                const offset = Math.sin(this.animationTimer * 0.5) * 20;
-                this.isPlayerAttacking ? ctx.translate(offset, 0) : ctx.translate(-offset, 0);
-            }
+            const offset = Math.sin(this.animationTimer * 0.5) * 15;
+            if (this.isPlayerAttacking) ctx.translate(offset, 0); else ctx.translate(-offset, 0);
+        } else if (this.animation === 'Heal') {
+            ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
+            ctx.fillRect(100, 400 - (60 - this.animationTimer) * 2, 100, 10);
         }
     }
 
-    // Reuse helper methods from previous implementation
-    drawBackground(ctx) { /* same as before */
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, 300);
-        skyGrad.addColorStop(0, '#3498db'); skyGrad.addColorStop(1, '#87ceeb');
-        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, 800, 600);
+    drawBackground(ctx) {
+        const skyG = ctx.createLinearGradient(0, 0, 0, 300);
+        skyG.addColorStop(0, '#3498db'); skyG.addColorStop(1, '#87ceeb');
+        ctx.fillStyle = skyG; ctx.fillRect(0, 0, 800, 600);
         ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(150, 420, 120, 40, 0, 0, Math.PI * 2);
         ctx.ellipse(600, 180, 100, 30, 0, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#27ae60'; ctx.fillRect(0, 400, 800, 200);
     }
 
-    drawMonster(ctx, monster, x, y, isBackView) {
+    drawMonster(ctx, monster, x, y, back) {
         ctx.save(); ctx.translate(x, y);
         if (monster.name === 'Bulbasaur') {
             ctx.fillStyle = '#52be80'; ctx.beginPath(); ctx.ellipse(0, 0, 40, 30, 0, 0, Math.PI * 2); ctx.fill();
@@ -235,19 +311,19 @@ export class BattleScene {
         } else {
             ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(0, 0, 30, 45, 0, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = '#fff'; if (!isBackView) { ctx.fillRect(-10, -15, 6, 6); ctx.fillRect(10, -15, 6, 6); }
+        ctx.fillStyle = '#fff'; if (!back) { ctx.fillRect(-10, -15, 6, 6); ctx.fillRect(10, -15, 6, 6); }
         ctx.restore();
     }
 
     drawUIBox(ctx, x, y, w, h) {
-        ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke();
     }
 
-    drawHPBar(ctx, x, y, current, max) {
+    drawHPBar(ctx, x, y, curr, max) {
         ctx.fillStyle = '#333'; ctx.fillRect(x, y, 200, 10);
-        const hpP = Math.max(0, current / max);
-        ctx.fillStyle = hpP > 0.5 ? '#2ecc71' : (hpP > 0.2 ? '#f1c40f' : '#e74c3c');
-        ctx.fillRect(x, y, 200 * hpP, 10);
+        const p = Math.max(0, curr / max);
+        ctx.fillStyle = p > 0.5 ? '#2ecc71' : (p > 0.2 ? '#f1c40f' : '#e74c3c');
+        ctx.fillRect(x, y, 200 * p, 10);
     }
 }
