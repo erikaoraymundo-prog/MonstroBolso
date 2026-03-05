@@ -68,6 +68,9 @@ export class Engine {
     }
 
     setScene(name) {
+        if (this.currentScene && this.currentScene.destroy) {
+            this.currentScene.destroy();
+        }
         this.currentScene = this.scenes.get(name);
         if (this.currentScene && this.currentScene.init) {
             this.currentScene.init();

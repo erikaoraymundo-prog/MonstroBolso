@@ -169,21 +169,9 @@ class OverworldScene {
         const p1 = new Monster(1, "Bulbasaur", { hp: 45, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 }, "Adamant", "Intimidate");
         const e1 = new Monster(4, "Charmander", { hp: 39, attack: 52, defense: 43, spAttack: 60, spDefense: 50, speed: 65 }, "Modest", "None");
 
-        this.destroy();
         const battleScene = new BattleScene(this.engine, p1, e1);
         this.engine.scenes.set('battle', battleScene);
         this.engine.setScene('battle');
-
-        // Add specific key listener for battle
-        window.addEventListener('keydown', (e) => {
-            if (this.engine.currentScene === battleScene) {
-                battleScene.onKeyPress(e.key);
-                if (e.key === 'Esc') {
-                    this.engine.setScene('overworld');
-                    this.init();
-                }
-            }
-        });
     }
 
     render(ctx) {

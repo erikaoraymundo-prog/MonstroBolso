@@ -43,6 +43,7 @@ export class Battle {
         this.player.currentStats.hp = Math.min(this.player.baseStats.hp, this.player.currentStats.hp + potion.heal);
         const healed = this.player.currentStats.hp - oldHp;
         this.log.push(`Used ${potion.name}! Healed ${healed} HP.`);
+        this.checkFainted();
     }
 
     attemptCapture(block) {
@@ -114,7 +115,8 @@ export class BattleScene {
     handleInput(x, y) {
         if (this.state === "ANIMATING") return;
 
-        if (this.state === "MESSAGE" || (this.battle.isFinished && this.state !== "ANIMATING")) {
+        // Return to map on click when battle is over
+        if (this.battle.isFinished && (this.state === "MESSAGE" || this.state === "MAIN_MENU")) {
             this.engine.setScene('overworld');
             return;
         }
@@ -141,17 +143,21 @@ export class BattleScene {
             else if (this.isInside(x, y, 400, 520, 300, 40)) this.state = "MAIN_MENU";
         }
         else if (this.state === "BAG_ITEMS") {
-            const items = Bag[this.currentBagSection];
+            const items = Bag[this.currentBagSection] || [];
             let found = false;
             items.forEach((item, i) => {
                 const ix = 80 + (i % 2 * 320);
                 const iy = 470 + (Math.floor(i / 2) * 50);
-                if (!found && this.isInside(x, y, ix, iy, 300, 40)) {
+                if (!found && this.isInside(x, y, ix, iy, 300, 45)) {
                     this.useItem(item);
                     found = true;
                 }
             });
+            // Back button in BAG_ITEMS
             if (!found && this.isInside(x, y, 400, 520, 300, 50)) this.state = "BAG_SECTIONS";
+        }
+        else if (this.state === "MESSAGE") {
+            this.engine.setScene('overworld');
         }
     }
 
@@ -260,28 +266,28 @@ export class BattleScene {
 
     drawMoveMenu(ctx, moves) {
         moves.forEach((move, i) => {
-            const x = 80 + (i % 2 * 320); const y = 495 + (Math.floor(i / 2) * 45);
-            ctx.fillStyle = "#fff";
+            const x = 80 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
+            ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
             ctx.fillText(move, x, y);
         });
-        ctx.fillText("Voltar", 400, 545);
+        ctx.fillText("Voltar", 400, 550);
     }
 
     drawBagItems(ctx) {
         const items = Bag[this.currentBagSection] || [];
         items.forEach((item, i) => {
-            const x = 80 + (i % 2 * 320); const y = 495 + (Math.floor(i / 2) * 45);
-            ctx.fillStyle = "#fff";
+            const x = 80 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
+            ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
             ctx.fillText(`${item.name} x${item.qty}`, x, y);
         });
-        ctx.fillText("Voltar", 400, 545);
+        ctx.fillText("Voltar", 400, 550);
     }
 
     drawLog(ctx) {
         let y = 490;
         ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
         this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 80, y); y += 25; });
-        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para sair)", 250, 555);
+        if (this.battle.isFinished) ctx.fillText("(Clique para voltar ao mapa)", 250, 555);
     }
 
     drawAnimation(ctx) {
@@ -310,20 +316,7 @@ export class BattleScene {
             const targetX = 600, targetY = 150;
             const x = startX + (targetX - startX) * progress;
             const y = startY + (targetY - startY) * progress - Math.sin(progress * Math.PI) * 150;
-
-            ctx.fillStyle = "#fff";
-            ctx.strokeStyle = "#000";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(x, y, 12, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            // Red top for CatchBlock style
-            ctx.fillStyle = "#e74c3c";
-            ctx.beginPath();
-            ctx.arc(x, y, 12, Math.PI, Math.PI * 2);
-            ctx.fill();
+            ctx.fillStyle = "#e74c3c"; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
     }
