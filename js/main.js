@@ -126,11 +126,21 @@ class OverworldScene {
             else if (this.keys['ArrowDown'] || this.keys['s']) this.player.move(0, 1, this.map);
             else if (this.keys['ArrowLeft'] || this.keys['a']) this.player.move(-1, 0, this.map);
             else if (this.keys['ArrowRight'] || this.keys['d']) this.player.move(1, 0, this.map);
-            else if (this.keys['b']) { // Transition to Battle Test
+        }
+
+        const oldX = this.player.gridX;
+        const oldY = this.player.gridY;
+        this.player.update();
+
+        // Random Encounter Logic in Tall Grass (Tile 2)
+        if (!this.player.isMoving && (this.player.gridX !== oldX || this.player.gridY !== oldY)) {
+            const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
+            if (currentTile === 2 && Math.random() < 0.15) { // 15% chance
+                console.log("Wild monster appeared!");
                 this.startBattle();
+                return;
             }
         }
-        this.player.update();
 
         // Check Dive Mechanic
         const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
