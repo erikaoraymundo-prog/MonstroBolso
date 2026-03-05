@@ -1,3 +1,4 @@
+import { Engine } from './engine.js';
 import { TileMap, UrbanMap, Player, TILE_SIZE } from './maps.js';
 import { Monster } from './data.js';
 import { BattleScene } from './battle.js';
@@ -152,4 +153,8 @@ const engine = new Engine('gameCanvas');
 const overworld = new OverworldScene(engine);
 engine.scenes.set('overworld', overworld);
 engine.setScene('overworld');
-engine.start();
+
+document.getElementById('start-button').addEventListener('click', () => {
+    document.getElementById('start-screen').classList.add('hidden');
+    engine.start();
+});

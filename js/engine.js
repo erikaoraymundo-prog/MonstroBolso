@@ -44,6 +44,7 @@ export class Engine {
     }
 
     async start() {
+        this.lastTime = performance.now();
         requestAnimationFrame((time) => this.loop(time));
     }
 
