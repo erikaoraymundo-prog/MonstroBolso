@@ -350,9 +350,7 @@ export class BattleScene {
     drawMonster(ctx, monster, x, y, back, flash) {
         ctx.save(); ctx.translate(x, y);
 
-        if (flash > 0) {
-            ctx.filter = `brightness(${100 + flash * 5}%) sepia(100%) saturate(1000%) hue-rotate(-50deg)`;
-        }
+        if (flash > 0) ctx.filter = `brightness(${100 + flash * 5}%) sepia(100%) saturate(1000%) hue-rotate(-50deg)`;
 
         const scale = 1 + Math.sin(Date.now() * 0.003) * 0.05;
         ctx.scale(scale, 1 / scale);
@@ -363,15 +361,50 @@ export class BattleScene {
             ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, -35, 30, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#82e0aa'; ctx.beginPath(); ctx.ellipse(0, 0, 45, 35, 0, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#27ae60'; ctx.fillRect(-20, -10, 10, 10); ctx.fillRect(10, 5, 8, 8);
-        } else {
+        } else if (monster.name === 'Charmander') {
             const cg = ctx.createLinearGradient(0, -50, 0, 50);
             cg.addColorStop(0, '#f39c12'); cg.addColorStop(1, '#e67e22');
             ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, 0, 35, 50, 0, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.moveTo(20, 10); ctx.quadraticCurveTo(50, 30, 40, -40); ctx.lineTo(30, -30); ctx.fill();
             ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(42, -45, 12, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(42, -45, 6, 0, Math.PI * 2); ctx.fill();
+        } else if (monster.name === 'Squirtle') {
+            ctx.fillStyle = '#5dade2'; ctx.beginPath(); ctx.ellipse(0, 0, 40, 45, 0, 0, Math.PI * 2); ctx.fill(); // Body
+            ctx.fillStyle = '#f5b041'; ctx.beginPath(); ctx.ellipse(0, 5, 30, 35, 0, 0, Math.PI * 2); ctx.fill(); // Shell
+            ctx.strokeStyle = '#a04000'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#5dade2'; ctx.beginPath(); ctx.arc(0, -40, 25, 0, Math.PI * 2); ctx.fill(); // Head
+        } else if (monster.name === 'Pikachu') {
+            ctx.fillStyle = '#f4d03f'; ctx.beginPath(); ctx.ellipse(0, 0, 30, 45, 0, 0, Math.PI * 2); ctx.fill(); // Body
+            ctx.beginPath(); ctx.arc(0, -40, 25, 0, Math.PI * 2); ctx.fill(); // Head
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(-20, -60); ctx.lineTo(-25, -90); ctx.lineTo(-10, -65); ctx.fill(); // Ears
+            ctx.beginPath(); ctx.moveTo(20, -60); ctx.lineTo(25, -90); ctx.lineTo(10, -65); ctx.fill();
+            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(-15, -35, 6, 0, Math.PI * 2); ctx.fill(); // Cheeks
+            ctx.beginPath(); ctx.arc(15, -35, 6, 0, Math.PI * 2); ctx.fill();
+        } else if (monster.name === 'Gastly') {
+            const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, 50);
+            grad.addColorStop(0, '#5b2c6f'); grad.addColorStop(1, 'rgba(91, 44, 111, 0)');
+            ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, 50, 0, Math.PI * 2); ctx.fill(); // Gas
+            ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill(); // Core
+        } else if (monster.name === 'Pidgey') {
+            ctx.fillStyle = '#a04000'; ctx.beginPath(); ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2); ctx.fill(); // Body
+            ctx.fillStyle = '#edbb99'; ctx.beginPath(); ctx.ellipse(0, 5, 20, 25, 0, 0, Math.PI * 2); ctx.fill(); // Belly
+            ctx.fillStyle = '#a04000'; ctx.beginPath(); ctx.arc(0, -35, 22, 0, Math.PI * 2); ctx.fill(); // Head
+            ctx.fillStyle = '#f4d03f'; ctx.beginPath(); ctx.moveTo(-5, -40); ctx.lineTo(0, -30); ctx.lineTo(5, -40); ctx.fill(); // Beak
+        } else if (monster.name === 'Mewtwo') {
+            ctx.fillStyle = '#ebdef0'; ctx.beginPath(); ctx.ellipse(0, 0, 35, 55, 0, 0, Math.PI * 2); ctx.fill(); // Body
+            ctx.fillStyle = '#a569bd'; ctx.beginPath(); ctx.ellipse(0, 15, 20, 40, 0, 0, Math.PI * 2); ctx.fill(); // Purple belly
+            ctx.fillStyle = '#ebdef0'; ctx.beginPath(); ctx.arc(0, -55, 22, 0, Math.PI * 2); ctx.fill(); // Head
+            ctx.strokeStyle = '#a569bd'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(0, -35); ctx.lineTo(0, -10); ctx.stroke(); // Tail/Neck
         }
-        ctx.fillStyle = '#fff'; if (!back) { ctx.fillRect(-15, -20, 10, 12); ctx.fillRect(10, -20, 10, 12); ctx.fillStyle = '#000'; ctx.fillRect(-12, -15, 4, 6); ctx.fillRect(13, -15, 4, 6); }
+
+        ctx.fillStyle = '#fff';
+        if (!back) {
+            ctx.beginPath(); ctx.ellipse(-15, -20, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(15, -20, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(-15, -18, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(15, -18, 3, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.restore();
     }
 

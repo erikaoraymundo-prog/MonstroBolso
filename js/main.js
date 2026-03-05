@@ -177,7 +177,7 @@ class OverworldScene {
         if (!this.player.isMoving && (this.player.gridX !== oldX || this.player.gridY !== oldY)) {
             const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
             if (currentTile === 2 && Math.random() < 0.12) {
-                this.startBattle();
+                this.startBattle(true); // isTallGrass = true
                 return;
             }
         }
@@ -200,10 +200,11 @@ class OverworldScene {
         this.camera.y = this.player.pixelY - this.engine.height / 2 + TILE_SIZE / 2;
     }
 
-    startBattle() {
+    startBattle(isTallGrass = false) {
         const p1 = new Monster(1, "Bulbasaur", { hp: 45, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 }, "Adamant", "Intimidate");
-        const e1 = new Monster(4, "Charmander", { hp: 39, attack: 52, defense: 43, spAttack: 60, spDefense: 50, speed: 65 }, "Modest", "None");
+        const e1 = Monster.createRandom(isTallGrass);
 
+        console.log(`Battle started against ${e1.name}!`);
         const battleScene = new BattleScene(this.engine, p1, e1);
         this.engine.scenes.set('battle', battleScene);
         this.engine.setScene('battle');
