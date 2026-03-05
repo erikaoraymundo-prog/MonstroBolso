@@ -108,13 +108,27 @@ export class Player {
     }
 
     render(ctx, camera) {
-        ctx.fillStyle = '#e74c3c'; // Player color
-        ctx.fillRect(
-            this.pixelX - camera.x,
-            this.pixelY - camera.y,
-            TILE_SIZE,
-            TILE_SIZE
-        );
+        const x = this.pixelX - camera.x;
+        const y = this.pixelY - camera.y;
+
+        // Head
+        ctx.fillStyle = '#f5b7b1';
+        ctx.beginPath();
+        ctx.arc(x + TILE_SIZE / 2, y + 8, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body/Shirt
+        ctx.fillStyle = '#e74c3c';
+        ctx.fillRect(x + 6, y + 15, 20, 12);
+
+        // Pants
+        ctx.fillStyle = '#2e86c1';
+        ctx.fillRect(x + 6, y + 27, 20, 5);
+
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + TILE_SIZE / 2 - 4, y + 6, 2, 2);
+        ctx.fillRect(x + TILE_SIZE / 2 + 2, y + 6, 2, 2);
     }
 }
 
