@@ -9,10 +9,10 @@ class OverworldScene {
     constructor(engine) {
         this.engine = engine;
         this.ui = new UI();
-        this.naturalMap = new TileMap(25, 20);
-        this.urbanMap = new UrbanMap(25, 20);
+        this.naturalMap = new TileMap(60, 40);
+        this.urbanMap = new UrbanMap(60, 40);
         this.map = this.naturalMap;
-        this.player = new Player(12, 10);
+        this.player = new Player(30, 20); // Center start
         this.camera = { x: 0, y: 0 };
         this.keys = {};
         this.isDiving = false;
@@ -56,37 +56,54 @@ class OverworldScene {
             this.setBoundary(this.map.width - 1, y);
         }
 
-        // 3. Central Path
-        for (let x = 4; x < 21; x++) {
-            this.map.setTile(0, x, 10, 7); // Horizontal path
-            this.map.setTile(0, 12, x - 2, 7); // Vertical cross path
-        }
+        // 3. Central Village (Starter Town)
+        this.fillArea(25, 15, 35, 25, 7); // Town Square (Path)
 
-        // 4. Lake Area (Bottom Right)
-        for (let x = 15; x < 22; x++) {
-            for (let y = 13; y < 18; y++) {
-                const dist = Math.sqrt(Math.pow(x - 18.5, 2) + Math.pow(y - 15.5, 2));
-                if (dist < 3) {
+        // Player House (Block of Rock walls/roof)
+        this.drawHouse(28, 16, 4, 4);
+        this.drawHouse(33, 16, 4, 4);
+        this.drawHouse(28, 21, 4, 4);
+
+        // 4. North Forest Route
+        this.fillArea(28, 0, 32, 15, 7); // Route Path
+        this.fillArea(5, 5, 20, 15, 2); // Dense Forest Left
+        this.fillArea(40, 5, 55, 15, 2); // Dense Forest Right
+
+        // 5. South Lake Area
+        this.fillArea(28, 25, 32, 40, 7); // Route South
+        for (let x = 10; x < 50; x++) {
+            for (let y = 30; y < 38; y++) {
+                const dx = x - 30;
+                const dy = y - 34;
+                if (Math.sqrt(dx * dx + dy * dy) < 8) {
                     this.map.setTile(0, x, y, 3);
                     this.map.setCollision(x, y, 1);
-                }
-                if (dist < 1) {
-                    this.map.setTile(0, x, y, 4); // Deep water in middle
-                    this.map.setCollision(x, y, 0); // Walkable for Dive
+                    if (Math.sqrt(dx * dx + dy * dy) < 4) {
+                        this.map.setTile(0, x, y, 4); // Deep water
+                        this.map.setCollision(x, y, 0);
+                    }
                 }
             }
         }
 
-        // 5. Tall Grass Patches (Forest feeling)
-        this.fillArea(2, 2, 6, 6, 2); // Top left forest
-        this.fillArea(18, 2, 22, 6, 2); // Top right forest
+        // 6. Natural Details
+        for (let i = 0; i < 40; i++) {
+            const rx = Math.floor(Math.random() * 58) + 1;
+            const ry = Math.floor(Math.random() * 38) + 1;
+            if (this.map.layers[0][ry * this.map.width + rx] === 1) {
+                this.map.setTile(0, rx, ry, 6); // Random flowers
+            }
+        }
+    }
 
-        // 6. Flower clusters
-        this.map.setTile(0, 10, 8, 6);
-        this.map.setTile(0, 11, 8, 6);
-        this.map.setTile(0, 10, 9, 6);
-        this.map.setTile(0, 14, 12, 6);
-        this.map.setTile(0, 15, 12, 6);
+    drawHouse(x, y, w, h) {
+        for (let ox = 0; ox < w; ox++) {
+            for (let oy = 0; oy < h; oy++) {
+                const id = oy === 0 ? 9 : 5; // Rock roof, Stone walls
+                this.map.setTile(1, x + ox, y + oy, id);
+                this.map.setCollision(x + ox, y + oy, 1);
+            }
+        }
     }
 
     setBoundary(x, y) {
