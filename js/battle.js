@@ -304,6 +304,26 @@ export class BattleScene {
         } else if (this.animation === 'Heal') {
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
             ctx.fillRect(100, 400 - (60 - this.animationTimer) * 2, 100, 10);
+        } else if (this.animation === 'Capture') {
+            const progress = (60 - this.animationTimer) / 60;
+            const startX = 150, startY = 400;
+            const targetX = 600, targetY = 150;
+            const x = startX + (targetX - startX) * progress;
+            const y = startY + (targetY - startY) * progress - Math.sin(progress * Math.PI) * 150;
+
+            ctx.fillStyle = "#fff";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Red top for CatchBlock style
+            ctx.fillStyle = "#e74c3c";
+            ctx.beginPath();
+            ctx.arc(x, y, 12, Math.PI, Math.PI * 2);
+            ctx.fill();
         }
         ctx.restore();
     }
