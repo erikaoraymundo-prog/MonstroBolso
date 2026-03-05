@@ -3,8 +3,15 @@ export const Bag = {
         { id: "oran_berry", name: "Oran Berry", qty: 5, effect: (monster) => monster.currentStats.hp += 10 }
     ],
     capture: [
-        { id: "poke_ball", name: "Poké Ball", qty: 10 }
+        { id: "catch_block", name: "CatchBlock", qty: 5, rate: 1.0 },
+        { id: "high_block", name: "HighBlock", qty: 3, rate: 1.5 },
+        { id: "heavy_block", name: "HeavyBlock", qty: 1, rate: 2.0 }
     ],
+    potions: [
+        { id: "potion", name: "Poção", qty: 5, heal: 20 },
+        { id: "super_potion", name: "Super Poção", qty: 2, heal: 50 }
+    ],
+    battle_items: [],
     key_items: [
         { id: "tri_pass", name: "Tri-Pass", qty: 1 }
     ],
