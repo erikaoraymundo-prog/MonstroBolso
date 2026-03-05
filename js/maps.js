@@ -61,7 +61,11 @@ export class TileMap {
             2: '#27ae60', // Tall Grass
             3: '#3498db', // Water
             4: '#e67e22', // Deep Water (Dive)
-            5: '#7f8c8d'  // Rock/Wall
+            5: '#7f8c8d', // Rock/Wall
+            6: '#f1c40f', // Flowers (Yellow)
+            7: '#e67e22', // Path (Orange-ish)
+            8: '#d35400', // Dirt/Boundary
+            9: '#2c3e50'  // Dark Rock
         };
         return colors[id] || '#000';
     }

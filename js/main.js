@@ -33,22 +33,65 @@ class OverworldScene {
     }
 
     initMap() {
-        // Fill base grass
+        // 1. Base Layer (Grass)
         for (let i = 0; i < this.map.width * this.map.height; i++) {
             this.map.layers[0][i] = 1;
         }
 
-        // Add some water and rocks
-        for (let x = 5; x < 10; x++) {
-            for (let y = 5; y < 10; y++) {
-                this.map.setTile(0, x, y, 3); // Water
-                this.map.setCollision(x, y, 1);
+        // 2. Boundaries (Dark Rocks)
+        for (let x = 0; x < this.map.width; x++) {
+            this.setBoundary(x, 0);
+            this.setBoundary(x, this.map.height - 1);
+        }
+        for (let y = 0; y < this.map.height; y++) {
+            this.setBoundary(0, y);
+            this.setBoundary(this.map.width - 1, y);
+        }
+
+        // 3. Central Path
+        for (let x = 4; x < 21; x++) {
+            this.map.setTile(0, x, 10, 7); // Horizontal path
+            this.map.setTile(0, 12, x - 2, 7); // Vertical cross path
+        }
+
+        // 4. Lake Area (Bottom Right)
+        for (let x = 15; x < 22; x++) {
+            for (let y = 13; y < 18; y++) {
+                const dist = Math.sqrt(Math.pow(x - 18.5, 2) + Math.pow(y - 15.5, 2));
+                if (dist < 3) {
+                    this.map.setTile(0, x, y, 3);
+                    this.map.setCollision(x, y, 1);
+                }
+                if (dist < 1) {
+                    this.map.setTile(0, x, y, 4); // Deep water in middle
+                    this.map.setCollision(x, y, 0); // Walkable for Dive
+                }
             }
         }
 
-        // Deep water for Dive test
-        this.map.setTile(0, 7, 7, 4);
-        this.map.setCollision(7, 7, 0); // Allow entry for deep water interaction
+        // 5. Tall Grass Patches (Forest feeling)
+        this.fillArea(2, 2, 6, 6, 2); // Top left forest
+        this.fillArea(18, 2, 22, 6, 2); // Top right forest
+
+        // 6. Flower clusters
+        this.map.setTile(0, 10, 8, 6);
+        this.map.setTile(0, 11, 8, 6);
+        this.map.setTile(0, 10, 9, 6);
+        this.map.setTile(0, 14, 12, 6);
+        this.map.setTile(0, 15, 12, 6);
+    }
+
+    setBoundary(x, y) {
+        this.map.setTile(0, x, y, 9);
+        this.map.setCollision(x, y, 1);
+    }
+
+    fillArea(x1, y1, x2, y2, tileId) {
+        for (let x = x1; x < x2; x++) {
+            for (let y = y1; y < y2; y++) {
+                this.map.setTile(0, x, y, tileId);
+            }
+        }
     }
 
     toggleDive() {
@@ -65,7 +108,11 @@ class OverworldScene {
         } else {
             // Restore natural colors
             this.map.getTileColor = (id) => {
-                const colors = { 1: '#2ecc71', 2: '#27ae60', 3: '#3498db', 4: '#e67e22', 5: '#7f8c8d' };
+                const colors = {
+                    1: '#2ecc71', 2: '#27ae60', 3: '#3498db',
+                    4: '#e67e22', 5: '#7f8c8d', 6: '#f1c40f',
+                    7: '#e67e22', 8: '#d35400', 9: '#2c3e50'
+                };
                 return colors[id] || '#000';
             };
         }
