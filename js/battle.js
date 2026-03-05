@@ -79,7 +79,7 @@ export class BattleScene {
         this.battle = new Battle(playerMonster, enemyMonster);
         this.battle.init();
 
-        this.state = "MAIN_MENU"; // MAIN_MENU, MOVE_MENU, BAG_SECTIONS, BAG_ITEMS, ANIMATING, MESSAGE
+        this.state = "MAIN_MENU";
         this.menuOptions = ["Lutar", "Mochila", "Fugir"];
         this.bagSections = [
             { id: "capture", name: "Itens de Captura" },
@@ -202,7 +202,6 @@ export class BattleScene {
                     }, 500);
                 } else if (this.battle.isFinished) {
                     this.state = "MESSAGE";
-                    this.destroy(); // Remove listener when finished
                 } else {
                     this.state = "MAIN_MENU";
                 }
@@ -211,7 +210,9 @@ export class BattleScene {
     }
 
     render(ctx) {
+        ctx.save();
         this.drawBackground(ctx);
+
         if (!this.battle.isFinished || this.battle.winner !== "enemy")
             this.drawMonster(ctx, this.battle.player, 150, 400, true);
         if (!this.battle.isFinished || this.battle.winner !== "player")
@@ -228,7 +229,7 @@ export class BattleScene {
         ctx.fillText(this.battle.enemy.name, 70, 75);
         this.drawHPBar(ctx, 70, 90, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
 
-        // Bottom Menu
+        // Menu / Log Box
         this.drawUIBox(ctx, 50, 450, 700, 120);
         if (this.state === "MAIN_MENU") this.drawMenu(ctx, this.menuOptions);
         else if (this.state === "MOVE_MENU") this.drawMoveMenu(ctx, this.moveOptions);
@@ -237,6 +238,7 @@ export class BattleScene {
         else this.drawLog(ctx);
 
         if (this.state === "ANIMATING") this.drawAnimation(ctx);
+        ctx.restore();
     }
 
     drawMenu(ctx, options) {
@@ -244,7 +246,7 @@ export class BattleScene {
             const x = 50 + (i * 233);
             ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(x + 5, 455, 223, 110);
             ctx.fillStyle = "#fff"; ctx.font = "20px Inter";
-            ctx.fillText(opt, x + 80, 515);
+            ctx.fillText(opt, x + 60, 515);
         });
     }
 
@@ -273,6 +275,7 @@ export class BattleScene {
     }
 
     drawAnimation(ctx) {
+        ctx.save();
         if (this.animation === 'RazorLeaf') {
             ctx.fillStyle = "#2ecc71";
             this.particles.forEach(p => {
@@ -292,6 +295,7 @@ export class BattleScene {
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
             ctx.fillRect(100, 400 - (60 - this.animationTimer) * 2, 100, 10);
         }
+        ctx.restore();
     }
 
     drawBackground(ctx) {
