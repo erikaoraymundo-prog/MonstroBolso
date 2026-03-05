@@ -1,4 +1,4 @@
-import { TileMap, UrbanMap, Player, TILE_SIZE } from './map.js';
+import { TileMap, UrbanMap, Player, TILE_SIZE } from './maps.js';
 import { Monster } from './data.js';
 import { BattleScene } from './battle.js';
 import { UI } from './ui.js';

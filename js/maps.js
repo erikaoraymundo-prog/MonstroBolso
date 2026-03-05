@@ -1,3 +1,5 @@
+import { GameState } from './bag.js';
+
 export const TILE_SIZE = 32;
 
 export class TileMap {
