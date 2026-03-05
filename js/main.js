@@ -21,13 +21,17 @@ class OverworldScene {
     }
 
     init() {
-        this.keys = {}; // Reset keys on init
-        this.keydownHandler = (e) => this.keys[e.key] = true;
-        this.keyupHandler = (e) => this.keys[e.key] = false;
+        this.keys = {};
+        this.keydownHandler = (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            this.keys[key] = true;
+        };
+        this.keyupHandler = (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            this.keys[key] = false;
+        };
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
-        // Clear keys to prevent loops
-        this.keys = {};
         console.log("Overworld Scene Initialized");
     }
 
@@ -128,11 +132,12 @@ class OverworldScene {
             else if (this.keys['ArrowDown'] || this.keys['s']) this.player.move(0, 1, this.map);
             else if (this.keys['ArrowLeft'] || this.keys['a']) this.player.move(-1, 0, this.map);
             else if (this.keys['ArrowRight'] || this.keys['d']) this.player.move(1, 0, this.map);
-            else if (this.keys['b']) {
-                this.keys['b'] = false; // Prevent auto-retrigger
-                this.startBattle();
-                return;
-            }
+        }
+
+        if (this.keys['b']) { // Case-insensitive due to new handler
+            this.keys['b'] = false;
+            this.startBattle();
+            return;
         }
 
         const oldX = this.player.gridX;
