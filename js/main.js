@@ -26,6 +26,8 @@ class OverworldScene {
         this.keyupHandler = (e) => this.keys[e.key] = false;
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
+        // Clear keys to prevent loops
+        this.keys = {};
         console.log("Overworld Scene Initialized");
     }
 
@@ -126,6 +128,11 @@ class OverworldScene {
             else if (this.keys['ArrowDown'] || this.keys['s']) this.player.move(0, 1, this.map);
             else if (this.keys['ArrowLeft'] || this.keys['a']) this.player.move(-1, 0, this.map);
             else if (this.keys['ArrowRight'] || this.keys['d']) this.player.move(1, 0, this.map);
+            else if (this.keys['b']) {
+                this.keys['b'] = false; // Prevent auto-retrigger
+                this.startBattle();
+                return;
+            }
         }
 
         const oldX = this.player.gridX;

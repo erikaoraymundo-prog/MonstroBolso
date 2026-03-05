@@ -115,9 +115,9 @@ export class BattleScene {
     handleInput(x, y) {
         if (this.state === "ANIMATING") return;
 
-        // EXIT BATTLE: If finished or in message state, any click returns to map
+        // Return to map on click when battle is over
         if (this.battle.isFinished || this.state === "MESSAGE") {
-            console.log("Exiting Battle Scene...");
+            console.log("Battle Over. Transitioning to Map...");
             this.engine.setScene('overworld');
             return;
         }
