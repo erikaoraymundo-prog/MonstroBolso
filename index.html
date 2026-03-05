@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MonstroBolso - Adventure</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <!-- HUD and Menus will be here -->
+            <div id="hud">
+                <div id="pokedex-count">Captured: 0/151</div>
+                <div id="badges">Badges: 0</div>
+            </div>
+            <div id="dialogue-box" class="hidden">
+                <p id="dialogue-text"></p>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

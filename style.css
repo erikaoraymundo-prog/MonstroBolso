@@ -1,0 +1,73 @@
+:root {
+    --primary-bg: #1a1a1a;
+    --text-color: #f0f0f0;
+    --ui-border: #444;
+    --accent: #e74c3c;
+    --glass-bg: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#game-container {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    border: 4px solid var(--ui-border);
+    background-color: #000;
+    box-shadow: 0 0 50px rgba(0,0,0,0.5);
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 10px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(5px);
+    border-radius: 8px;
+    pointer-events: auto;
+}
+
+#dialogue-box {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    height: 120px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid var(--accent);
+    padding: 20px;
+    border-radius: 12px;
+    pointer-events: auto;
+}
+
+.hidden {
+    display: none;
+}
