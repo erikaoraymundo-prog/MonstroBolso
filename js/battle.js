@@ -114,7 +114,7 @@ export class BattleScene {
     handleInput(x, y) {
         if (this.state === "ANIMATING") return;
 
-        if (this.state === "MESSAGE" || this.battle.isFinished) {
+        if (this.state === "MESSAGE" || (this.battle.isFinished && this.state !== "ANIMATING")) {
             this.engine.setScene('overworld');
             return;
         }
@@ -122,7 +122,11 @@ export class BattleScene {
         if (this.state === "MAIN_MENU") {
             if (this.isInside(x, y, 50, 450, 233, 120)) this.state = "MOVE_MENU";
             else if (this.isInside(x, y, 283, 450, 233, 120)) this.state = "BAG_SECTIONS";
-            else if (this.isInside(x, y, 516, 450, 233, 120)) this.engine.setScene('overworld');
+            else if (this.isInside(x, y, 516, 450, 233, 120)) {
+                this.battle.log.push("Fugiu da batalha!");
+                this.battle.isFinished = true;
+                this.state = "MESSAGE";
+            }
         }
         else if (this.state === "MOVE_MENU") {
             if (this.isInside(x, y, 80, 470, 300, 40)) this.startPlayerTurn(this.moveOptions[0]);
@@ -138,12 +142,16 @@ export class BattleScene {
         }
         else if (this.state === "BAG_ITEMS") {
             const items = Bag[this.currentBagSection];
+            let found = false;
             items.forEach((item, i) => {
                 const ix = 80 + (i % 2 * 320);
                 const iy = 470 + (Math.floor(i / 2) * 50);
-                if (this.isInside(x, y, ix, iy, 300, 45)) this.useItem(item);
+                if (!found && this.isInside(x, y, ix, iy, 300, 40)) {
+                    this.useItem(item);
+                    found = true;
+                }
             });
-            if (this.isInside(x, y, 400, 520, 300, 50)) this.state = "BAG_SECTIONS";
+            if (!found && this.isInside(x, y, 400, 520, 300, 50)) this.state = "BAG_SECTIONS";
         }
     }
 
@@ -229,7 +237,7 @@ export class BattleScene {
         ctx.fillText(this.battle.enemy.name, 70, 75);
         this.drawHPBar(ctx, 70, 90, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
 
-        // Menu / Log Box
+        // Bottom Menu
         this.drawUIBox(ctx, 50, 450, 700, 120);
         if (this.state === "MAIN_MENU") this.drawMenu(ctx, this.menuOptions);
         else if (this.state === "MOVE_MENU") this.drawMoveMenu(ctx, this.moveOptions);
@@ -252,19 +260,21 @@ export class BattleScene {
 
     drawMoveMenu(ctx, moves) {
         moves.forEach((move, i) => {
-            const x = 80 + (i % 2 * 320); const y = 490 + (Math.floor(i / 2) * 45);
+            const x = 80 + (i % 2 * 320); const y = 495 + (Math.floor(i / 2) * 45);
+            ctx.fillStyle = "#fff";
             ctx.fillText(move, x, y);
         });
-        ctx.fillText("Voltar", 400, 535);
+        ctx.fillText("Voltar", 400, 545);
     }
 
     drawBagItems(ctx) {
         const items = Bag[this.currentBagSection] || [];
         items.forEach((item, i) => {
-            const x = 80 + (i % 2 * 320); const y = 490 + (Math.floor(i / 2) * 45);
+            const x = 80 + (i % 2 * 320); const y = 495 + (Math.floor(i / 2) * 45);
+            ctx.fillStyle = "#fff";
             ctx.fillText(`${item.name} x${item.qty}`, x, y);
         });
-        ctx.fillText("Voltar", 400, 535);
+        ctx.fillText("Voltar", 400, 545);
     }
 
     drawLog(ctx) {
