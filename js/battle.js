@@ -115,9 +115,7 @@ export class BattleScene {
     handleInput(x, y) {
         if (this.state === "ANIMATING") return;
 
-        // Return to map on click when battle is over
         if (this.battle.isFinished || this.state === "MESSAGE") {
-            console.log("Battle Over. Transitioning to Map...");
             this.engine.setScene('overworld');
             return;
         }
@@ -202,9 +200,6 @@ export class BattleScene {
     update(dt) {
         if (this.state === "ANIMATING") {
             this.animationTimer--;
-            if (this.animation === 'RazorLeaf') {
-                this.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.4; });
-            }
             if (this.animationTimer <= 0) {
                 if (this.isPlayerAttacking && !this.battle.isFinished) {
                     setTimeout(() => {
@@ -225,20 +220,19 @@ export class BattleScene {
         this.drawBackground(ctx);
 
         if (!this.battle.isFinished || this.battle.winner !== "enemy")
-            this.drawMonster(ctx, this.battle.player, 150, 400, true);
+            this.drawMonster(ctx, this.battle.player, 180, 420, true);
         if (!this.battle.isFinished || this.battle.winner !== "player")
-            this.drawMonster(ctx, this.battle.enemy, 600, 150, false);
+            this.drawMonster(ctx, this.battle.enemy, 620, 180, false);
 
-        // HP Bars
-        this.drawUIBox(ctx, 450, 350, 300, 80);
-        ctx.fillStyle = '#fff'; ctx.font = "bold 16px Inter";
-        ctx.fillText(this.battle.player.name, 470, 375);
-        this.drawHPBar(ctx, 470, 390, this.battle.player.currentStats.hp, this.battle.player.baseStats.hp);
+        // HP Bars (Premium Look)
+        this.drawUIBox(ctx, 450, 320, 320, 100);
+        ctx.fillStyle = '#fff'; ctx.font = "bold 20px Outfit, Inter";
+        ctx.fillText(this.battle.player.name, 475, 355);
+        this.drawHPBar(ctx, 475, 375, this.battle.player.currentStats.hp, this.battle.player.baseStats.hp);
 
-        this.drawUIBox(ctx, 50, 50, 300, 80);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(this.battle.enemy.name, 70, 75);
-        this.drawHPBar(ctx, 70, 90, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
+        this.drawUIBox(ctx, 30, 40, 320, 100);
+        ctx.fillText(this.battle.enemy.name, 55, 75);
+        this.drawHPBar(ctx, 55, 95, this.battle.enemy.currentStats.hp, this.battle.enemy.baseStats.hp);
 
         // Bottom Menu
         this.drawUIBox(ctx, 50, 450, 700, 120);
@@ -255,99 +249,125 @@ export class BattleScene {
     drawMenu(ctx, options) {
         options.forEach((opt, i) => {
             const x = 50 + (i * 233);
-            ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.fillRect(x + 5, 455, 223, 110);
-            ctx.fillStyle = "#fff"; ctx.font = "20px Inter";
-            ctx.fillText(opt, x + 60, 515);
+            ctx.fillStyle = "rgba(255,255,255,0.08)";
+            ctx.beginPath(); ctx.roundRect(x + 10, 460, 213, 100, 15); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "bold 22px Outfit, Inter";
+            ctx.textAlign = "center";
+            ctx.fillText(opt, x + 116, 520);
+            ctx.textAlign = "left";
         });
     }
 
     drawMoveMenu(ctx, moves) {
         moves.forEach((move, i) => {
-            const x = 80 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
-            ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
+            const x = 100 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
+            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
             ctx.fillText(move, x, y);
         });
-        ctx.fillText("Voltar", 400, 550);
+        ctx.fillText("Voltar", 450, 550);
     }
 
     drawBagItems(ctx) {
         const items = Bag[this.currentBagSection] || [];
         items.forEach((item, i) => {
-            const x = 80 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
-            ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
+            const x = 100 + (i % 2 * 320); const y = 500 + (Math.floor(i / 2) * 50);
+            ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
             ctx.fillText(`${item.name} x${item.qty}`, x, y);
         });
-        ctx.fillText("Voltar", 400, 550);
+        ctx.fillText("Voltar", 450, 550);
     }
 
     drawLog(ctx) {
-        let y = 490;
-        ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
-        this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 80, y); y += 25; });
-        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para voltar ao mapa)", 180, 555);
+        let y = 495;
+        ctx.fillStyle = "#fff"; ctx.font = "20px Outfit, Inter";
+        this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 100, y); y += 30; });
+        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para sair)", 250, 555);
     }
 
     drawAnimation(ctx) {
         ctx.save();
         if (this.animation === 'RazorLeaf') {
-            ctx.fillStyle = "#2ecc71";
+            ctx.fillStyle = "#58d68d";
             this.particles.forEach(p => {
-                ctx.beginPath(); ctx.ellipse(p.x, p.y, 8, 4, Math.atan2(p.vy, p.vx), 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(p.x, p.y, 10, 5, Math.atan2(p.vy, p.vx), 0, Math.PI * 2); ctx.fill();
             });
-        } else if (this.animation === 'PoisonPowder') {
-            ctx.fillStyle = "rgba(155, 89, 182, 0.6)";
-            for (let i = 0; i < 20; i++) {
-                ctx.beginPath();
-                ctx.arc(600 + Math.sin(Date.now() * 0.01 + i) * 50, 150 + Math.cos(Date.now() * 0.01 + i) * 50, 4, 0, Math.PI * 2);
-                ctx.fill();
-            }
         } else if (this.animation === 'Tackle') {
-            const offset = Math.sin(this.animationTimer * 0.5) * 15;
+            const offset = Math.sin(this.animationTimer * 0.8) * 20;
             if (this.isPlayerAttacking) ctx.translate(offset, 0); else ctx.translate(-offset, 0);
         } else if (this.animation === 'Heal') {
             ctx.fillStyle = "rgba(46, 204, 113, 0.4)";
-            ctx.fillRect(100, 400 - (60 - this.animationTimer) * 2, 100, 10);
+            const h = (60 - this.animationTimer) * 5;
+            ctx.fillRect(130, 450 - h, 100, 10);
         } else if (this.animation === 'Capture') {
             const progress = (60 - this.animationTimer) / 60;
-            const startX = 150, startY = 400;
-            const targetX = 600, targetY = 150;
-            const x = startX + (targetX - startX) * progress;
-            const y = startY + (targetY - startY) * progress - Math.sin(progress * Math.PI) * 150;
-            ctx.fillStyle = "#e74c3c"; ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI * 2); ctx.fill();
+            const x = 180 + (620 - 180) * progress;
+            const y = 420 + (180 - 420) * progress - Math.sin(progress * Math.PI) * 200;
+            ctx.fillStyle = "#e74c3c"; ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI); ctx.fill();
+            ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke();
         }
         ctx.restore();
     }
 
     drawBackground(ctx) {
-        const skyG = ctx.createLinearGradient(0, 0, 0, 300);
-        skyG.addColorStop(0, '#3498db'); skyG.addColorStop(1, '#87ceeb');
-        ctx.fillStyle = skyG; ctx.fillRect(0, 0, 800, 600);
-        ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.ellipse(150, 420, 120, 40, 0, 0, Math.PI * 2);
-        ctx.ellipse(600, 180, 100, 30, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#27ae60'; ctx.fillRect(0, 400, 800, 200);
+        const grd = ctx.createLinearGradient(0, 0, 0, 600);
+        grd.addColorStop(0, "#85c1e9"); grd.addColorStop(0.5, "#d4e6f1"); grd.addColorStop(1, "#27ae60");
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, 800, 600);
+
+        // Battle Platforms
+        ctx.fillStyle = "rgba(0,0,0,0.1)";
+        ctx.beginPath(); ctx.ellipse(180, 450, 120, 40, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(620, 200, 100, 30, 0, 0, Math.PI * 2); ctx.fill();
     }
 
     drawMonster(ctx, monster, x, y, back) {
         ctx.save(); ctx.translate(x, y);
         if (monster.name === 'Bulbasaur') {
-            ctx.fillStyle = '#52be80'; ctx.beginPath(); ctx.ellipse(0, 0, 40, 30, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.arc(0, -25, 25, 0, Math.PI * 2); ctx.fill();
+            // Bulb
+            const bg = ctx.createRadialGradient(0, -35, 5, 0, -35, 30);
+            bg.addColorStop(0, '#58d68d'); bg.addColorStop(1, '#1d8348');
+            ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, -35, 30, 0, Math.PI * 2); ctx.fill();
+            // Body
+            ctx.fillStyle = '#82e0aa'; ctx.beginPath(); ctx.ellipse(0, 0, 45, 35, 0, 0, Math.PI * 2); ctx.fill();
+            // Spots
+            ctx.fillStyle = '#27ae60'; ctx.fillRect(-20, -10, 10, 10); ctx.fillRect(10, 5, 8, 8);
         } else {
-            ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.ellipse(0, 0, 30, 45, 0, 0, Math.PI * 2); ctx.fill();
+            // Body
+            const cg = ctx.createLinearGradient(0, -50, 0, 50);
+            cg.addColorStop(0, '#f39c12'); cg.addColorStop(1, '#e67e22');
+            ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, 0, 35, 50, 0, 0, Math.PI * 2); ctx.fill();
+            // Tail
+            ctx.fillStyle = '#f39c12'; ctx.beginPath(); ctx.moveTo(20, 10); ctx.quadraticCurveTo(50, 30, 40, -40); ctx.lineTo(30, -30); ctx.fill();
+            // Flame
+            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(42, -45, 12, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(42, -45, 6, 0, Math.PI * 2); ctx.fill();
         }
-        ctx.fillStyle = '#fff'; if (!back) { ctx.fillRect(-10, -15, 6, 6); ctx.fillRect(10, -15, 6, 6); }
+        // Eyes
+        ctx.fillStyle = '#fff';
+        if (!back) {
+            ctx.fillRect(-15, -20, 10, 12); ctx.fillRect(10, -20, 10, 12);
+            ctx.fillStyle = '#000'; ctx.fillRect(-12, -15, 4, 6); ctx.fillRect(13, -15, 4, 6);
+        } else {
+            // Back look
+        }
         ctx.restore();
     }
 
     drawUIBox(ctx, x, y, w, h) {
-        ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke();
+        ctx.save();
+        ctx.shadowBlur = 15; ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.fillStyle = 'rgba(20, 20, 20, 0.85)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(x, y, w, h, 20); ctx.fill(); ctx.stroke();
+        ctx.restore();
     }
 
     drawHPBar(ctx, x, y, curr, max) {
-        ctx.fillStyle = '#333'; ctx.fillRect(x, y, 200, 10);
+        ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.roundRect(x, y, 250, 15, 7); ctx.fill();
         const p = Math.max(0, curr / max);
-        ctx.fillStyle = p > 0.5 ? '#2ecc71' : (p > 0.2 ? '#f1c40f' : '#e74c3c');
-        ctx.fillRect(x, y, 200 * p, 10);
+        const color = p > 0.5 ? '#58d68d' : (p > 0.2 ? '#f4d03f' : '#ec7063');
+        ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, 250 * p, 15, 7); ctx.fill();
+        // Inner detail
+        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(x, y, 250 * p, 4);
     }
 }

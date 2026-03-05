@@ -9,10 +9,10 @@ class OverworldScene {
     constructor(engine) {
         this.engine = engine;
         this.ui = new UI();
-        this.naturalMap = new TileMap(60, 40);
-        this.urbanMap = new UrbanMap(60, 40);
+        this.naturalMap = new TileMap(80, 60);
+        this.urbanMap = new UrbanMap(80, 60);
         this.map = this.naturalMap;
-        this.player = new Player(30, 20); // Center start
+        this.player = new Player(40, 30); // Start in the middle of the world
         this.camera = { x: 0, y: 0 };
         this.keys = {};
         this.isDiving = false;
@@ -32,7 +32,7 @@ class OverworldScene {
         };
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
-        console.log("Overworld Scene Initialized");
+        console.log("Mundo Expandido Inicializado!");
     }
 
     destroy() {
@@ -41,67 +41,68 @@ class OverworldScene {
     }
 
     initMap() {
-        // 1. Base Layer (Grass)
+        // 1. Fill with Lush Grass
         for (let i = 0; i < this.map.width * this.map.height; i++) {
             this.map.layers[0][i] = 1;
         }
 
-        // 2. Boundaries (Dark Rocks)
-        for (let x = 0; x < this.map.width; x++) {
-            this.setBoundary(x, 0);
-            this.setBoundary(x, this.map.height - 1);
+        // 2. World Boundaries
+        for (let x = 0; x < this.map.width; x++) { this.setBoundary(x, 0); this.setBoundary(x, this.map.height - 1); }
+        for (let y = 0; y < this.map.height; y++) { this.setBoundary(0, y); this.setBoundary(this.map.width - 1, y); }
+
+        // 3. Central Village (Vila Inicial)
+        this.fillArea(35, 25, 45, 35, 7); // Town Square
+        this.drawHouse(36, 26, 4, 4); // Player House
+        this.drawHouse(41, 26, 4, 4); // Rival House
+        this.drawHouse(38, 31, 5, 4); // Lab
+
+        // 4. North Route (Route 1 - Forest)
+        this.fillArea(39, 5, 41, 25, 7); // Path
+        this.fillArea(10, 5, 35, 20, 2); // Tall Grass Forest Left
+        this.fillArea(45, 5, 70, 20, 2); // Tall Grass Forest Right
+        this.drawHouse(36, 10, 3, 3); // Rest Stop
+
+        // 5. East City (Metropolis Area) - Transition to Path
+        this.fillArea(45, 29, 79, 31, 7); // East Road
+        this.fillArea(65, 25, 75, 40, 7); // City Square
+        for (let i = 0; i < 5; i++) {
+            this.drawHouse(66 + (i % 2) * 5, 26 + Math.floor(i / 2) * 5, 4, 4);
         }
-        for (let y = 0; y < this.map.height; y++) {
-            this.setBoundary(0, y);
-            this.setBoundary(this.map.width - 1, y);
-        }
 
-        // 3. Central Village (Starter Town)
-        this.fillArea(25, 15, 35, 25, 7); // Town Square (Path)
-
-        // Player House (Block of Rock walls/roof)
-        this.drawHouse(28, 16, 4, 4);
-        this.drawHouse(33, 16, 4, 4);
-        this.drawHouse(28, 21, 4, 4);
-
-        // 4. North Forest Route
-        this.fillArea(28, 0, 32, 15, 7); // Route Path
-        this.fillArea(5, 5, 20, 15, 2); // Dense Forest Left
-        this.fillArea(40, 5, 55, 15, 2); // Dense Forest Right
-
-        // 5. South Lake Area
-        this.fillArea(28, 25, 32, 40, 7); // Route South
-        for (let x = 10; x < 50; x++) {
-            for (let y = 30; y < 38; y++) {
-                const dx = x - 30;
-                const dy = y - 34;
-                if (Math.sqrt(dx * dx + dy * dy) < 8) {
+        // 6. South Lake (Giant Water Body)
+        this.fillArea(39, 35, 41, 59, 7); // South Path
+        for (let x = 10; x < 70; x++) {
+            for (let y = 45; y < 58; y++) {
+                const dx = x - 40; const dy = y - 51;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 15) {
                     this.map.setTile(0, x, y, 3);
                     this.map.setCollision(x, y, 1);
-                    if (Math.sqrt(dx * dx + dy * dy) < 4) {
-                        this.map.setTile(0, x, y, 4); // Deep water
+                    if (dist < 8) {
+                        this.map.setTile(0, x, y, 4); // Deep water for Dive
+                        this.map.setCollision(x, y, 0); // Walkable on dive
+                    }
+                    if (dist < 3) {
+                        this.map.setTile(0, x, y, 1); // Island center
                         this.map.setCollision(x, y, 0);
+                        this.map.setTile(1, x, y, 6); // Flowers on island
                     }
                 }
             }
         }
 
-        // 6. Natural Details
-        for (let i = 0; i < 40; i++) {
-            const rx = Math.floor(Math.random() * 58) + 1;
-            const ry = Math.floor(Math.random() * 38) + 1;
-            if (this.map.layers[0][ry * this.map.width + rx] === 1) {
-                this.map.setTile(0, rx, ry, 6); // Random flowers
-            }
-        }
-    }
+        // 7. West Mountains
+        this.fillArea(0, 20, 15, 40, 9); // Mountain Range
+        this.fillArea(5, 25, 10, 35, 8); // Dirt/Cave Entrance Area
 
-    drawHouse(x, y, w, h) {
-        for (let ox = 0; ox < w; ox++) {
-            for (let oy = 0; oy < h; oy++) {
-                const id = oy === 0 ? 9 : 5; // Rock roof, Stone walls
-                this.map.setTile(1, x + ox, y + oy, id);
-                this.map.setCollision(x + ox, y + oy, 1);
+        // 8. Scattering details
+        for (let i = 0; i < 150; i++) {
+            const rx = Math.floor(Math.random() * 78) + 1;
+            const ry = Math.floor(Math.random() * 58) + 1;
+            if (this.map.layers[0][ry * this.map.width + rx] === 1) {
+                const type = Math.random();
+                if (type < 0.1) this.map.setTile(0, rx, ry, 6); // Flowers
+                else if (type < 0.15) this.map.setTile(1, rx, ry, 5); // Single small stone
             }
         }
     }
@@ -115,28 +116,39 @@ class OverworldScene {
         for (let x = x1; x < x2; x++) {
             for (let y = y1; y < y2; y++) {
                 this.map.setTile(0, x, y, tileId);
+                if (tileId === 9 || tileId === 3) this.map.setCollision(x, y, 1);
             }
         }
+    }
+
+    drawHouse(x, y, w, h) {
+        for (let ox = 0; ox < w; ox++) {
+            for (let oy = 0; oy < h; oy++) {
+                const id = oy === 0 ? 9 : 5;
+                this.map.setTile(1, x + ox, y + oy, id);
+                this.map.setCollision(x + ox, y + oy, 1);
+            }
+        }
+        // Door
+        this.map.setTile(1, x + Math.floor(w / 2), y + h - 1, 8);
+        this.map.setCollision(x + Math.floor(w / 2), y + h - 1, 0);
     }
 
     toggleDive() {
         this.isDiving = !this.isDiving;
         console.log("Switching Map:", this.isDiving ? "Underwater" : "Natural");
 
-        // Change colors/map logic based on Dive state
         if (this.isDiving) {
-            // Underwater tileset colors
             this.map.getTileColor = (id) => {
-                const colors = { 1: '#2980b9', 4: '#34495e' }; // Water/Sand colors
+                const colors = { 1: '#21618c', 3: '#2e86c1', 4: '#1b4f72', 9: '#154360' };
                 return colors[id] || '#1a1a1a';
             };
         } else {
-            // Restore natural colors
             this.map.getTileColor = (id) => {
                 const colors = {
                     1: '#2ecc71', 2: '#27ae60', 3: '#3498db',
-                    4: '#e67e22', 5: '#7f8c8d', 6: '#f1c40f',
-                    7: '#e67e22', 8: '#d35400', 9: '#2c3e50'
+                    4: '#2980b9', 5: '#7f8c8d', 6: '#f1c40f',
+                    7: '#edbb99', 8: '#a04000', 9: '#2c3e50'
                 };
                 return colors[id] || '#000';
             };
@@ -145,13 +157,13 @@ class OverworldScene {
 
     update(dt) {
         if (!this.player.isMoving) {
-            if (this.keys['ArrowUp'] || this.keys['w']) this.player.move(0, -1, this.map);
-            else if (this.keys['ArrowDown'] || this.keys['s']) this.player.move(0, 1, this.map);
-            else if (this.keys['ArrowLeft'] || this.keys['a']) this.player.move(-1, 0, this.map);
-            else if (this.keys['ArrowRight'] || this.keys['d']) this.player.move(1, 0, this.map);
+            if (this.keys['arrowup'] || this.keys['w']) this.player.move(0, -1, this.map);
+            else if (this.keys['arrowdown'] || this.keys['s']) this.player.move(0, 1, this.map);
+            else if (this.keys['arrowleft'] || this.keys['a']) this.player.move(-1, 0, this.map);
+            else if (this.keys['arrowright'] || this.keys['d']) this.player.move(1, 0, this.map);
         }
 
-        if (this.keys['b']) { // Case-insensitive due to new handler
+        if (this.keys['b']) {
             this.keys['b'] = false;
             this.startBattle();
             return;
@@ -161,47 +173,29 @@ class OverworldScene {
         const oldY = this.player.gridY;
         this.player.update();
 
-        // Random Encounter Logic in Tall Grass (Tile 2)
+        // Random Encounter Logic
         if (!this.player.isMoving && (this.player.gridX !== oldX || this.player.gridY !== oldY)) {
             const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
-            if (currentTile === 2 && Math.random() < 0.15) { // 15% chance
-                console.log("Wild monster appeared!");
+            if (currentTile === 2 && Math.random() < 0.12) {
                 this.startBattle();
                 return;
             }
         }
 
-        // Check Dive Mechanic
+        // Dive Mechanic
         const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
-        if (currentTile === 4 && this.keys['Enter']) {
+        if (currentTile === 4 && this.keys['enter']) {
             this.toggleDive();
-            this.keys['Enter'] = false; // debounce
+            this.keys['enter'] = false;
         }
 
-        // Switch to Urban Map if Giovanni defeated (simulated with 'g' key)
-        if (this.keys['g']) {
-            GameState.GlobalSwitch_GiovanniDefeated = true;
-            this.map = this.urbanMap;
-            this.ui.showDialogue("Welcome to Sevii Islands!");
-        }
-
-        // Toggle Bag with 'i'
         if (this.keys['i']) {
             this.ui.toggleBag();
             this.keys['i'] = false;
         }
 
-        // Elite Four Gate Check
-        if (this.player.gridX === 20 && this.player.gridY === 2 && GameState.GymBadgeCount < 8) {
-            this.ui.showDialogue("The Elite Four Gate is closed. You need 8 badges.");
-            this.player.gridX = 19; // Push back
-            this.player.targetX = 19 * TILE_SIZE;
-            this.player.isMoving = false;
-        }
-
         this.ui.updateHUD();
 
-        // Camera follow
         this.camera.x = this.player.pixelX - this.engine.width / 2 + TILE_SIZE / 2;
         this.camera.y = this.player.pixelY - this.engine.height / 2 + TILE_SIZE / 2;
     }
@@ -219,9 +213,15 @@ class OverworldScene {
         this.map.render(ctx, this.camera);
         this.player.render(ctx, this.camera);
 
-        ctx.fillStyle = '#fff';
-        ctx.fillText("Press 'Enter' on orange tiles to Dive", 10, 580);
-        ctx.fillText("Press 'b' to start a Battle", 10, 560);
+        // Premium HUD overlay hint
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.roundRect(10, 530, 250, 60, 10); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = "14px Outfit, Inter";
+        ctx.fillText("WASD/Setas: Mover", 20, 550);
+        ctx.fillText("B: Debug Luta | I: Mochila", 20, 570);
+        ctx.fillText("Enter na água funda para Dive", 20, 590);
+        ctx.restore();
     }
 }
 
