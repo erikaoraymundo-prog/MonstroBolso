@@ -115,8 +115,9 @@ export class BattleScene {
     handleInput(x, y) {
         if (this.state === "ANIMATING") return;
 
-        // Return to map on click when battle is over
-        if (this.battle.isFinished && (this.state === "MESSAGE" || this.state === "MAIN_MENU")) {
+        // EXIT BATTLE: If finished or in message state, any click returns to map
+        if (this.battle.isFinished || this.state === "MESSAGE") {
+            console.log("Exiting Battle Scene...");
             this.engine.setScene('overworld');
             return;
         }
@@ -153,11 +154,7 @@ export class BattleScene {
                     found = true;
                 }
             });
-            // Back button in BAG_ITEMS
             if (!found && this.isInside(x, y, 400, 520, 300, 50)) this.state = "BAG_SECTIONS";
-        }
-        else if (this.state === "MESSAGE") {
-            this.engine.setScene('overworld');
         }
     }
 
@@ -287,7 +284,7 @@ export class BattleScene {
         let y = 490;
         ctx.fillStyle = "#fff"; ctx.font = "18px Inter";
         this.battle.log.slice(-3).forEach(msg => { ctx.fillText(msg, 80, y); y += 25; });
-        if (this.battle.isFinished) ctx.fillText("(Clique para voltar ao mapa)", 250, 555);
+        if (this.battle.isFinished) ctx.fillText("(Clique em qualquer lugar para voltar ao mapa)", 180, 555);
     }
 
     drawAnimation(ctx) {

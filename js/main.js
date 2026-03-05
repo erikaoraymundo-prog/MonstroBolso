@@ -21,10 +21,12 @@ class OverworldScene {
     }
 
     init() {
+        this.keys = {}; // Reset keys on init
         this.keydownHandler = (e) => this.keys[e.key] = true;
         this.keyupHandler = (e) => this.keys[e.key] = false;
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
+        console.log("Overworld Scene Initialized");
     }
 
     destroy() {
