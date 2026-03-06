@@ -82,6 +82,7 @@ export class BattleScene {
 
     setupInput() {
         this.clickListener = (e) => {
+            if (this.engine.currentScene !== this) return;
             const rect = this.engine.canvas.getBoundingClientRect();
             this.handleInput(e.clientX - rect.left, e.clientY - rect.top);
         };
@@ -154,20 +155,23 @@ export class BattleScene {
             this.animationTimer--;
             if (this.animationTimer <= 0) {
                 if (this.isPlayerAttacking && !this.battle.isFinished) {
-                    this.state = "WAITING"; // Prevent multiple triggers
-                    setTimeout(() => {
-                        if (this.battle.isFinished) { this.state = "MESSAGE"; return; }
-                        const move = this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
-                        this.targetHP.player = this.battle.player.currentStats.hp;
-                        this.screenShake = 10;
-                        this.damageFlash.player = 20;
-                        this.playAnimation("Tackle", false);
-                    }, 800);
+                    this.state = "ENEMY_TURN_PREP";
+                    this.animationTimer = 40; // Delay before enemy attacks
                 } else if (this.battle.isFinished) {
                     this.state = "MESSAGE";
                 } else {
                     this.state = "MAIN_MENU";
                 }
+            }
+        } else if (this.state === "ENEMY_TURN_PREP") {
+            this.animationTimer--;
+            if (this.animationTimer <= 0) {
+                if (this.battle.isFinished) { this.state = "MESSAGE"; return; }
+                this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
+                this.targetHP.player = this.battle.player.currentStats.hp;
+                this.screenShake = 10;
+                this.damageFlash.player = 20;
+                this.playAnimation("Tackle", false);
             }
         }
     }

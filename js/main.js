@@ -17,19 +17,12 @@ class OverworldScene {
         this.keys = {};
         this.isDiving = false;
 
+        this.isTransitioning = false;
         this.initMap();
     }
 
     init() {
-        this.keys = {};
-        this.keydownHandler = (e) => {
-            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-            this.keys[key] = true;
-        };
-        this.keyupHandler = (e) => {
-            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-            this.keys[key] = false;
-        };
+        this.isTransitioning = false;
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
         console.log("Mundo Expandido Inicializado!");
@@ -163,7 +156,8 @@ class OverworldScene {
             else if (this.keys['arrowright'] || this.keys['d']) this.player.move(1, 0, this.map);
         }
 
-        if (this.keys['b']) {
+        if (this.keys['b'] && !this.isTransitioning) {
+            this.isTransitioning = true;
             this.keys['b'] = false;
             this.startBattle();
             return;
@@ -176,7 +170,8 @@ class OverworldScene {
         // Random Encounter Logic
         if (!this.player.isMoving && (this.player.gridX !== oldX || this.player.gridY !== oldY)) {
             const currentTile = this.map.layers[0][this.player.gridY * this.map.width + this.player.gridX];
-            if (currentTile === 2 && Math.random() < 0.12) {
+            if (currentTile === 2 && Math.random() < 0.12 && !this.isTransitioning) {
+                this.isTransitioning = true;
                 this.startBattle(true); // isTallGrass = true
                 return;
             }
