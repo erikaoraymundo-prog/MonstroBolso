@@ -18,11 +18,22 @@ class OverworldScene {
         this.isDiving = false;
 
         this.isTransitioning = false;
+
+        this.keydownHandler = (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            this.keys[key] = true;
+        };
+        this.keyupHandler = (e) => {
+            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            this.keys[key] = false;
+        };
+
         this.initMap();
     }
 
     init() {
         this.isTransitioning = false;
+        this.keys = {};
         window.addEventListener('keydown', this.keydownHandler);
         window.addEventListener('keyup', this.keyupHandler);
         console.log("Mundo Expandido Inicializado!");
