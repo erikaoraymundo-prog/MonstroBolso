@@ -1,6 +1,6 @@
 import { Engine } from './engine.js';
 import { TileMap, UrbanMap, Player, TILE_SIZE } from './maps.js';
-import { Monster } from './data.js';
+import { Monster, MONSTER_TEMPLATES } from './data.js';
 import { BattleScene } from './battle.js';
 import { UI } from './ui.js';
 import { GameState } from './bag.js';
@@ -206,10 +206,20 @@ class OverworldScene {
     }
 
     startBattle(isTallGrass = false) {
-        const p1 = new Monster(1, "Bulbasaur", { hp: 150, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 }, "Adamant", "Intimidate");
+        // Randomized starter logic: 30% Bulbasaur, 30% Squirtle, 30% Charmander, 10% Pikachu
+        const rand = Math.random();
+        let starterId;
+        if (rand < 0.3) starterId = 1;      // Bulbasaur
+        else if (rand < 0.6) starterId = 7; // Squirtle
+        else if (rand < 0.9) starterId = 4; // Charmander
+        else starterId = 25;               // Pikachu
+
+        const template = MONSTER_TEMPLATES[starterId];
+        // Create full monster instance from template (includes 150 HP balance)
+        const p1 = new Monster(starterId, template.name, template, "Adamant", "None");
         const e1 = Monster.createRandom(isTallGrass);
 
-        console.log(`Battle started against ${e1.name}!`);
+        console.log(`Battle started! You: ${p1.name} vs Enemy: ${e1.name}`);
         const battleScene = new BattleScene(this.engine, p1, e1);
         this.engine.scenes.set('battle', battleScene);
         this.engine.setScene('battle');
