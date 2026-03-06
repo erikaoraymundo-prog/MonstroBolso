@@ -142,21 +142,32 @@ export class BattleScene {
     playAnimation(name, isPlayerAttacking) { this.state = "ANIMATING"; this.animation = name; this.animationTimer = 60; this.isPlayerAttacking = isPlayerAttacking; }
 
     update(dt) {
-        if (this.displayHP.player > this.targetHP.player) this.displayHP.player -= 0.5;
-        if (this.displayHP.enemy > this.targetHP.enemy) this.displayHP.enemy -= 0.5;
-        if (this.displayHP.player < this.targetHP.player) this.displayHP.player += 0.5;
+        if (this.displayHP.player > this.targetHP.player) this.displayHP.player = Math.max(this.targetHP.player, this.displayHP.player - 1);
+        if (this.displayHP.enemy > this.targetHP.enemy) this.displayHP.enemy = Math.max(this.targetHP.enemy, this.displayHP.enemy - 1);
+        if (this.displayHP.player < this.targetHP.player) this.displayHP.player = Math.min(this.targetHP.player, this.displayHP.player + 1);
+
         if (this.screenShake > 0) this.screenShake -= 1;
         if (this.damageFlash.player > 0) this.damageFlash.player -= 1;
         if (this.damageFlash.enemy > 0) this.damageFlash.enemy -= 1;
+
         if (this.state === "ANIMATING") {
             this.animationTimer--;
             if (this.animationTimer <= 0) {
                 if (this.isPlayerAttacking && !this.battle.isFinished) {
+                    this.state = "WAITING"; // Prevent multiple triggers
                     setTimeout(() => {
-                        this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
-                        this.targetHP.player = this.battle.player.currentStats.hp; this.screenShake = 10; this.damageFlash.player = 20; this.playAnimation("Tackle", false);
-                    }, 500);
-                } else if (this.battle.isFinished) this.state = "MESSAGE"; else this.state = "MAIN_MENU";
+                        if (this.battle.isFinished) { this.state = "MESSAGE"; return; }
+                        const move = this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
+                        this.targetHP.player = this.battle.player.currentStats.hp;
+                        this.screenShake = 10;
+                        this.damageFlash.player = 20;
+                        this.playAnimation("Tackle", false);
+                    }, 800);
+                } else if (this.battle.isFinished) {
+                    this.state = "MESSAGE";
+                } else {
+                    this.state = "MAIN_MENU";
+                }
             }
         }
     }
