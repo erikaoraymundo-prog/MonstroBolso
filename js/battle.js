@@ -143,9 +143,12 @@ export class BattleScene {
     playAnimation(name, isPlayerAttacking) { this.state = "ANIMATING"; this.animation = name; this.animationTimer = 60; this.isPlayerAttacking = isPlayerAttacking; }
 
     update(dt) {
+        // Smooth HP transitions
         if (this.displayHP.player > this.targetHP.player) this.displayHP.player = Math.max(this.targetHP.player, this.displayHP.player - 1);
+        else if (this.displayHP.player < this.targetHP.player) this.displayHP.player = Math.min(this.targetHP.player, this.displayHP.player + 1);
+
         if (this.displayHP.enemy > this.targetHP.enemy) this.displayHP.enemy = Math.max(this.targetHP.enemy, this.displayHP.enemy - 1);
-        if (this.displayHP.player < this.targetHP.player) this.displayHP.player = Math.min(this.targetHP.player, this.displayHP.player + 1);
+        else if (this.displayHP.enemy < this.targetHP.enemy) this.displayHP.enemy = Math.min(this.targetHP.enemy, this.displayHP.enemy + 1);
 
         if (this.screenShake > 0) this.screenShake -= 1;
         if (this.damageFlash.player > 0) this.damageFlash.player -= 1;
@@ -154,24 +157,32 @@ export class BattleScene {
         if (this.state === "ANIMATING") {
             this.animationTimer--;
             if (this.animationTimer <= 0) {
-                if (this.isPlayerAttacking && !this.battle.isFinished) {
-                    this.state = "ENEMY_TURN_PREP";
-                    this.animationTimer = 40; // Delay before enemy attacks
-                } else if (this.battle.isFinished) {
-                    this.state = "MESSAGE";
+                if (this.isPlayerAttacking) {
+                    if (this.battle.isFinished) {
+                        this.state = "MESSAGE";
+                    } else {
+                        // After player attack finishes, prepare enemy attack
+                        this.state = "ENEMY_TURN_PREP";
+                        this.animationTimer = 60; // Wait 1 second before enemy hits
+                    }
                 } else {
-                    this.state = "MAIN_MENU";
+                    // After enemy attack finishes, return to menu or finish
+                    if (this.battle.isFinished) this.state = "MESSAGE";
+                    else this.state = "MAIN_MENU";
                 }
             }
         } else if (this.state === "ENEMY_TURN_PREP") {
             this.animationTimer--;
             if (this.animationTimer <= 0) {
+                // EXPLICIT CHECK: Ensure battle isn't over before enemy strikes
                 if (this.battle.isFinished) { this.state = "MESSAGE"; return; }
+
+                // Enemy deals EXACTLY 20 damage once
                 this.battle.useMove("Investida", this.battle.enemy, this.battle.player);
                 this.targetHP.player = this.battle.player.currentStats.hp;
                 this.screenShake = 10;
-                this.damageFlash.player = 20;
-                this.playAnimation("Tackle", false);
+                this.damageFlash.player = 30; // Flash red longer for visibility
+                this.playAnimation("Tackle", false); // Tackle resets state to ANIMATING
             }
         }
     }
