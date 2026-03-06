@@ -124,6 +124,7 @@ export class TileMap {
 
     drawProceduralTile(ctx, id, x, y, gx, gy) {
         const baseColor = this.getTileColor(id);
+        const time = Date.now() * 0.001;
 
         ctx.save();
         ctx.translate(x, y);
@@ -162,7 +163,6 @@ export class TileMap {
                 ctx.stroke();
             }
         } else if (id === 2) { // Tall Grass
-            const time = Date.now() * 0.002;
             ctx.fillStyle = '#145a32';
             for (let i = 0; i < 4; i++) {
                 const ox = 2 + i * 8;
@@ -177,7 +177,6 @@ export class TileMap {
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.stroke();
             }
         } else if (id === 3 || id === 4) { // Water
-            const time = Date.now() * 0.001;
             // High-detail glistening
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
             for (let i = 0; i < 2; i++) {
