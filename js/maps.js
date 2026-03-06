@@ -7,43 +7,31 @@ export class TileMap {
         this.width = width;
         this.height = height;
         this.tileset = tileset;
-        this.layers = [
-            this.createLayer(0), // Ground
-            this.createLayer(0), // Obstacles
-            this.createLayer(0)  // Reflection/Transparency
-        ];
+        this.layers = [this.createLayer(0), this.createLayer(0), this.createLayer(0)];
         this.collisions = Array(width * height).fill(0);
         this.particles = [];
+        this.tileCache = new Map();
+        this.animFrame = 0;
         this.initAtmosphere();
     }
 
-    initAtmosphere() {
-        // Pre-populate some leaves/bubbles
-        for (let i = 0; i < 30; i++) {
-            this.spawnParticle();
-        }
-    }
+    initAtmosphere() { for (let i = 0; i < 30; i++) this.spawnParticle(); }
 
     spawnParticle() {
         const type = Math.random() < 0.5 ? 'leaf' : 'bubble';
         this.particles.push({
-            x: Math.random() * this.width * TILE_SIZE,
-            y: Math.random() * this.height * TILE_SIZE,
-            type: type,
-            vx: type === 'leaf' ? (Math.random() - 0.5) * 2 : 0,
+            x: Math.random() * this.width * TILE_SIZE, y: Math.random() * this.height * TILE_SIZE,
+            type, vx: type === 'leaf' ? (Math.random() - 0.5) * 2 : 0,
             vy: type === 'leaf' ? 1 + Math.random() : -0.5 - Math.random(),
-            life: 1 + Math.random() * 2,
             size: 2 + Math.random() * 4
         });
     }
 
     updateParticles() {
+        this.animFrame = (this.animFrame + 0.05) % 8; // Global animation timer for tiles
         this.particles.forEach((p, i) => {
-            p.x += p.vx;
-            p.y += p.vy;
+            p.x += p.vx; p.y += p.vy;
             if (p.type === 'leaf') p.x += Math.sin(Date.now() * 0.005 + i) * 0.5;
-
-            // Wrap or kill
             if (p.y > this.height * TILE_SIZE || p.y < 0) {
                 p.y = p.vy > 0 ? 0 : this.height * TILE_SIZE;
                 p.x = Math.random() * this.width * TILE_SIZE;
@@ -51,210 +39,121 @@ export class TileMap {
         });
     }
 
-    createLayer(defaultValue) {
-        return Array(this.width * this.height).fill(defaultValue);
-    }
-
-    setTile(layerIndex, x, y, tileId) {
-        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-            this.layers[layerIndex][y * this.width + x] = tileId;
-        }
-    }
-
-    setCollision(x, y, value) {
-        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-            this.collisions[y * this.width + x] = value;
-        }
-    }
-
-    isSolid(x, y) {
-        if (x < 0 || x >= this.width || y < 0 || y >= this.height) return true;
-        return this.collisions[y * this.width + x] === 1;
-    }
+    createLayer(defaultValue) { return Array(this.width * this.height).fill(defaultValue); }
+    setTile(layerIndex, x, y, tileId) { if (x >= 0 && x < this.width && y >= 0 && y < this.height) this.layers[layerIndex][y * this.width + x] = tileId; }
+    setCollision(x, y, value) { if (x >= 0 && x < this.width && y >= 0 && y < this.height) this.collisions[y * this.width + x] = value; }
+    isSolid(x, y) { return x < 0 || x >= this.width || y < 0 || y >= this.height || this.collisions[y * this.width + x] === 1; }
 
     render(ctx, camera) {
         this.updateParticles();
-
         ctx.save();
-        // Background layer
         for (let layer of this.layers) {
             for (let y = 0; y < this.height; y++) {
                 for (let x = 0; x < this.width; x++) {
                     const tileId = layer[y * this.width + x];
                     if (tileId === 0) continue;
-
                     const tx = x * TILE_SIZE - camera.x;
                     const ty = y * TILE_SIZE - camera.y;
-
                     if (tx < -TILE_SIZE || tx > ctx.canvas.width || ty < -TILE_SIZE || ty > ctx.canvas.height) continue;
 
-                    this.drawProceduralTile(ctx, tileId, tx, ty, x, y);
+                    this.drawCachedTile(ctx, tileId, tx, ty, x, y);
                 }
             }
         }
 
-        // Render Atmosphere
+        // Atmosphere
         this.particles.forEach(p => {
-            const px = p.x - camera.x;
-            const py = p.y - camera.y;
+            const px = p.x - camera.x; const py = p.y - camera.y;
             if (px < -10 || px > ctx.canvas.width + 10 || py < -10 || py > ctx.canvas.height + 10) return;
-
             ctx.fillStyle = p.type === 'leaf' ? 'rgba(46, 204, 113, 0.6)' : 'rgba(255,255,255,0.3)';
             ctx.beginPath();
-            if (p.type === 'leaf') {
-                ctx.ellipse(px, py, p.size, p.size / 2, Math.PI / 4, 0, Math.PI * 2);
-            } else {
-                ctx.arc(px, py, p.size / 2, 0, Math.PI * 2);
-            }
+            if (p.type === 'leaf') ctx.ellipse(px, py, p.size, p.size / 2, Math.PI / 4, 0, Math.PI * 2);
+            else ctx.arc(px, py, p.size / 2, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // Vignette effect for focus
-        const gradient = ctx.createRadialGradient(
-            ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width / 4,
-            ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width
-        );
-        gradient.addColorStop(0, 'rgba(0,0,0,0)');
-        gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
+        const vGrad = ctx.createRadialGradient(ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width / 4, ctx.canvas.width / 2, ctx.canvas.height / 2, ctx.canvas.width);
+        vGrad.addColorStop(0, 'rgba(0,0,0,0)'); vGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
+        ctx.fillStyle = vGrad; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.restore();
     }
 
-    drawProceduralTile(ctx, id, x, y, gx, gy) {
+    drawCachedTile(ctx, id, x, y, gx, gy) {
+        const isAnimated = (id === 2 || id === 3 || id === 4 || id === 6);
+        const frame = isAnimated ? Math.floor(this.animFrame) : 0;
+        const cacheKey = `${id}-${frame}-${isAnimated ? '' : (gx % 4) + '-' + (gy % 4)}`;
+
+        if (!this.tileCache.has(cacheKey)) {
+            const canvas = document.createElement('canvas');
+            canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+            const tctx = canvas.getContext('2d');
+            this.drawProceduralTile(tctx, id, gx, gy, frame);
+            this.tileCache.set(cacheKey, canvas);
+        }
+        ctx.drawImage(this.tileCache.get(cacheKey), x, y);
+    }
+
+    drawProceduralTile(ctx, id, gx, gy, frame) {
         const baseColor = this.getTileColor(id);
-        const time = Date.now() * 0.001;
+        const time = frame * (Math.PI * 2 / 8);
 
-        ctx.save();
-        ctx.translate(x, y);
-
-        // Base Tile with Gradient and Texture
+        // Base
         const grd = ctx.createLinearGradient(0, 0, TILE_SIZE, TILE_SIZE);
         grd.addColorStop(0, this.adjustColor(baseColor, 15));
         grd.addColorStop(1, this.adjustColor(baseColor, -15));
-        ctx.fillStyle = grd;
-        ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = grd; ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
 
-        // Simulated Texture (Noise/Dithering)
-        this.drawNoise(ctx, gx, gy, 0.05);
-
-        // Highlight/Shadow borders
-        ctx.fillStyle = 'rgba(255,255,255,0.15)';
-        ctx.fillRect(0, 0, TILE_SIZE, 1); ctx.fillRect(0, 0, 1, TILE_SIZE);
-        ctx.fillStyle = 'rgba(0,0,0,0.15)';
-        ctx.fillRect(0, TILE_SIZE - 1, TILE_SIZE, 1); ctx.fillRect(TILE_SIZE - 1, 0, 1, TILE_SIZE);
+        // Noise
+        for (let i = 0; i < 15; i++) {
+            const nx = (gx * 123 + i * 45) % TILE_SIZE; const ny = (gy * 321 + i * 67) % TILE_SIZE;
+            ctx.fillStyle = 'rgba(0,0,0,0.05)'; ctx.fillRect(nx, ny, 1, 1);
+        }
 
         if (id === 1) { // Grass
             ctx.fillStyle = this.adjustColor(baseColor, -20);
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 4; i++) {
                 const seed = (gx * 17 + gy * 11 + i) % 100;
-                const rx = (seed / 100) * (TILE_SIZE - 4);
-                const ry = ((seed * 7 % 100) / 100) * (TILE_SIZE - 4);
-                ctx.fillRect(rx, ry, 1, 2);
-            }
-            // Detailed grass blades
-            ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1;
-            for (let i = 0; i < 3; i++) {
-                const ox = ((gx + i * 7) % 10) * 3;
-                const oy = TILE_SIZE - ((gy + i * 3) % 10) * 3;
-                ctx.beginPath(); ctx.moveTo(ox, oy);
-                ctx.quadraticCurveTo(ox - 3, oy - 8, ox + 2, oy - 12);
-                ctx.stroke();
+                ctx.fillRect((seed / 100) * 28, ((seed * 7 % 100) / 100) * 28, 1, 2);
             }
         } else if (id === 2) { // Tall Grass
             ctx.fillStyle = '#145a32';
-            for (let i = 0; i < 4; i++) {
-                const ox = 2 + i * 8;
-                const sway = Math.sin(time + gx + i) * 4;
-                ctx.beginPath();
-                ctx.moveTo(ox, TILE_SIZE);
+            for (let i = 0; i < 3; i++) {
+                const ox = 4 + i * 10; const sway = Math.sin(time + i) * 4;
+                ctx.beginPath(); ctx.moveTo(ox, TILE_SIZE);
                 ctx.bezierCurveTo(ox + sway, TILE_SIZE - 10, ox - 5 + sway, TILE_SIZE - 20, ox + sway, TILE_SIZE - 28);
-                ctx.lineTo(ox + 5 + sway, TILE_SIZE - 28);
-                ctx.bezierCurveTo(ox + 10 + sway, TILE_SIZE - 10, ox + 10, TILE_SIZE - 5, ox + 8, TILE_SIZE);
-                ctx.fill();
-                // Blade highlight
-                ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.stroke();
+                ctx.lineTo(ox + 5 + sway, TILE_SIZE - 28); ctx.fill();
             }
         } else if (id === 3 || id === 4) { // Water
-            // High-detail glistening
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
-            for (let i = 0; i < 2; i++) {
-                const waveX = Math.sin(time + gx + i) * 12;
-                const waveY = Math.cos(time + gy + i) * 6;
-                ctx.beginPath();
-                ctx.ellipse(TILE_SIZE / 2 + waveX, TILE_SIZE / 2 + waveY, 6 - i * 2, 1.5, Math.PI / 6, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            // Transparency layer
-            ctx.fillStyle = "rgba(255,255,255,0.05)";
-            ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+            const waveX = Math.sin(time) * 5;
+            ctx.beginPath(); ctx.ellipse(TILE_SIZE / 2 + waveX, TILE_SIZE / 2, 8, 2, 0, 0, Math.PI * 2); ctx.fill();
         } else if (id === 6) { // Flowers
-            const anim = Math.sin(Date.now() * 0.002 + gx) * 3;
-            // Stem
+            const anim = Math.sin(time) * 3;
             ctx.strokeStyle = '#0e6655'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.moveTo(TILE_SIZE / 2, TILE_SIZE); ctx.lineTo(TILE_SIZE / 2, TILE_SIZE / 2 + anim); ctx.stroke();
-            // Detailed Petals
             ctx.fillStyle = '#ec7063';
             for (let i = 0; i < 6; i++) {
-                ctx.save();
-                ctx.translate(TILE_SIZE / 2, TILE_SIZE / 2 + anim);
-                ctx.rotate(i * Math.PI * 2 / 6 + time * 0.5);
-                ctx.beginPath(); ctx.ellipse(7, 0, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.stroke();
-                ctx.restore();
+                ctx.save(); ctx.translate(TILE_SIZE / 2, TILE_SIZE / 2 + anim); ctx.rotate(i * Math.PI / 3);
+                ctx.beginPath(); ctx.ellipse(6, 0, 5, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             }
-            ctx.fillStyle = '#f4d03f';
-            ctx.beginPath(); ctx.arc(TILE_SIZE / 2, TILE_SIZE / 2 + anim, 4, 0, Math.PI * 2); ctx.fill();
         } else if (id === 5 || id === 9) { // Rock/Wall
-            ctx.fillStyle = id === 9 ? '#2c3e50' : '#7f8c8d';
-            ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-            this.drawNoise(ctx, gx, gy, 0.15);
-            // Detailed Cracks & Bevel
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath();
-            ctx.moveTo(4, 4); ctx.lineTo(12, 10); ctx.lineTo(6, TILE_SIZE - 6); ctx.stroke();
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.strokeRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.moveTo(4, 4); ctx.lineTo(12, 10); ctx.lineTo(6, 26); ctx.stroke();
         } else if (id === 7 || id === 8) { // Path
             ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            for (let i = 0; i < 6; i++) {
-                const px = (gx * 31 + gy * 7 + i * 13) % TILE_SIZE;
-                const py = (gy * 23 + i * 19) % TILE_SIZE;
-                ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI * 2); ctx.fill();
-            }
+            for (let i = 0; i < 4; i++) ctx.fillRect((gx * 31 + i * 13) % 32, (gy * 23 + i * 19) % 32, 2, 2);
         }
-
-        ctx.restore();
-    }
-
-    drawNoise(ctx, gx, gy, opacity) {
-        ctx.save();
-        for (let i = 0; i < 15; i++) {
-            const nx = (gx * 123 + i * 45) % TILE_SIZE;
-            const ny = (gy * 321 + i * 67) % TILE_SIZE;
-            ctx.fillStyle = `rgba(0,0,0,${opacity})`;
-            ctx.fillRect(nx, ny, 1, 1);
-        }
-        ctx.restore();
     }
 
     getTileColor(id) {
-        const colors = {
-            1: '#2ecc71', 2: '#27ae60', 3: '#3498db', 4: '#2980b9',
-            5: '#95a5a6', 6: '#2ecc71', 7: '#f5c0a0', 8: '#e67e22', 9: '#34495e'
-        };
-        return colors[id] || '#000';
+        return { 1: '#2ecc71', 2: '#27ae60', 3: '#3498db', 4: '#2980b9', 5: '#95a5a6', 6: '#2ecc71', 7: '#f5c0a0', 8: '#e67e22', 9: '#34495e' }[id] || '#000';
     }
 
     adjustColor(hex, amount) {
         let col = hex.replace('#', '');
-        let r = parseInt(col.substring(0, 2), 16) + amount;
-        let g = parseInt(col.substring(2, 4), 16) + amount;
-        let b = parseInt(col.substring(4, 6), 16) + amount;
-        r = Math.max(0, Math.min(255, r));
-        g = Math.max(0, Math.min(255, g));
-        b = Math.max(0, Math.min(255, b));
-        const toHex = (n) => n.toString(16).padStart(2, '0');
-        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+        let r = Math.max(0, Math.min(255, parseInt(col.substring(0, 2), 16) + amount));
+        let g = Math.max(0, Math.min(255, parseInt(col.substring(2, 4), 16) + amount));
+        let b = Math.max(0, Math.min(255, parseInt(col.substring(4, 6), 16) + amount));
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 }
 
