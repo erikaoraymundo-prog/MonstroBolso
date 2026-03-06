@@ -201,7 +201,7 @@ class OverworldScene {
     }
 
     startBattle(isTallGrass = false) {
-        const p1 = new Monster(1, "Bulbasaur", { hp: 45, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 }, "Adamant", "Intimidate");
+        const p1 = new Monster(1, "Bulbasaur", { hp: 150, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 }, "Adamant", "Intimidate");
         const e1 = Monster.createRandom(isTallGrass);
 
         console.log(`Battle started against ${e1.name}!`);
