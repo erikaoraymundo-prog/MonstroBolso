@@ -1,6 +1,6 @@
 export const Bag = {
     berries: [
-        { id: "oran_berry", name: "Oran Berry", qty: 5, effect: (monster) => monster.currentStats.hp += 10 }
+        { id: "oran_berry", name: "Oran Berry", qty: 200, effect: (monster) => monster.currentStats.hp += 10 }
     ],
     capture: [
         { id: "catch_block", name: "CatchBlock", qty: 200, rate: 1.0 },
@@ -8,8 +8,8 @@ export const Bag = {
         { id: "heavy_block", name: "HeavyBlock", qty: 200, rate: 2.0 }
     ],
     potions: [
-        { id: "potion", name: "Poção", qty: 5, heal: 20 },
-        { id: "super_potion", name: "Super Poção", qty: 2, heal: 50 }
+        { id: "potion", name: "Poção", qty: 200, heal: 20 },
+        { id: "super_potion", name: "Super Poção", qty: 200, heal: 50 }
     ],
     battle_items: [],
     key_items: [
@@ -37,6 +37,8 @@ export const Bag = {
         return false;
     }
 };
+
+console.log("Inventário Inicializado com 200 unidades de itens de captura e cura.");
 
 export const GameState = {
     GymBadgeCount: 0,
