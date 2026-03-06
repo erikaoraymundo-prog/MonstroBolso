@@ -168,9 +168,17 @@ export class BattleScene {
         const idleBounce = Math.sin(Date.now() * 0.003) * 5;
         if (!this.battle.isFinished || this.battle.winner !== "enemy") this.drawMonster(ctx, this.battle.player, 180, 420 + idleBounce, true, this.damageFlash.player);
         if (!this.battle.isFinished || this.battle.winner !== "player") this.drawMonster(ctx, this.battle.enemy, 620, 180 + idleBounce, false, this.damageFlash.enemy);
-        this.drawUIBox(ctx, 450, 320, 320, 100); ctx.fillStyle = '#fff'; ctx.font = "bold 20px Outfit, Inter"; ctx.fillText(this.battle.player.name, 475, 355);
+        this.drawUIBox(ctx, 450, 320, 320, 100); ctx.fillStyle = '#fff'; ctx.font = "bold 20px Outfit, Inter";
+        ctx.fillText(this.battle.player.name, 475, 355);
+        ctx.font = "14px Outfit, Inter"; ctx.textAlign = "right";
+        ctx.fillText(`${Math.floor(this.displayHP.player)} / ${this.battle.player.baseStats.hp}`, 725, 355);
+        ctx.textAlign = "left";
         this.drawHPBar(ctx, 475, 375, this.displayHP.player, this.battle.player.baseStats.hp);
-        this.drawUIBox(ctx, 30, 40, 320, 100); ctx.fillText(this.battle.enemy.name, 55, 75);
+
+        this.drawUIBox(ctx, 30, 40, 320, 100); ctx.font = "bold 20px Outfit, Inter"; ctx.fillText(this.battle.enemy.name, 55, 75);
+        ctx.font = "14px Outfit, Inter"; ctx.textAlign = "right";
+        ctx.fillText(`${Math.floor(this.displayHP.enemy)} / ${this.battle.enemy.baseStats.hp}`, 330, 75);
+        ctx.textAlign = "left";
         this.drawHPBar(ctx, 55, 95, this.displayHP.enemy, this.battle.enemy.baseStats.hp);
         this.drawUIBox(ctx, 50, 450, 700, 120);
         if (this.state === "MAIN_MENU") this.drawMenu(ctx, this.menuOptions);
