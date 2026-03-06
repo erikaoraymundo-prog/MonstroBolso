@@ -22,9 +22,7 @@ export class Battle {
 
     useMove(moveName, attacker, target) {
         const move = this.moves[moveName] || { power: 40 };
-        const damage = move.power > 0
-            ? Math.floor((attacker.currentStats.attack / target.currentStats.defense) * move.power * (Math.random() * 0.15 + 0.85))
-            : 0;
+        const damage = move.power > 0 ? 20 : 0;
         target.currentStats.hp = Math.max(0, target.currentStats.hp - damage);
         this.log.push(`${attacker.name} used ${moveName}!`);
         if (damage > 0) this.log.push(`Dealt ${damage} damage.`);
