@@ -19,29 +19,28 @@ class OverworldScene {
 
         this.isTransitioning = false;
 
-        this.keydownHandler = (e) => {
-            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-            this.keys[key] = true;
-        };
-        this.keyupHandler = (e) => {
-            const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-            this.keys[key] = false;
-        };
+        window.addEventListener('keydown', (e) => {
+            if (this.engine.currentScene !== this) return;
+            this.keys[e.key.toLowerCase()] = true;
+            if (e.code.toLowerCase().includes('arrow')) this.keys[e.code.toLowerCase()] = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (this.engine.currentScene !== this) return;
+            this.keys[e.key.toLowerCase()] = false;
+            if (e.code.toLowerCase().includes('arrow')) this.keys[e.code.toLowerCase()] = false;
+        });
 
         this.initMap();
     }
 
     init() {
         this.isTransitioning = false;
-        this.keys = {};
-        window.addEventListener('keydown', this.keydownHandler);
-        window.addEventListener('keyup', this.keyupHandler);
+        this.keys = {}; // Clear stuck keys
         console.log("Mundo Expandido Inicializado!");
     }
 
     destroy() {
-        window.removeEventListener('keydown', this.keydownHandler);
-        window.removeEventListener('keyup', this.keyupHandler);
+        this.keys = {};
     }
 
     initMap() {
