@@ -19,6 +19,15 @@ class OverworldScene {
 
         this.isTransitioning = false;
 
+        // Randomized starter logic (Persistent): 30% Bulbasaur, 30% Squirtle, 30% Charmander, 10% Pikachu
+        const rand = Math.random();
+        if (rand < 0.3) this.starterId = 1;         // Bulbasaur
+        else if (rand < 0.6) this.starterId = 7;    // Squirtle
+        else if (rand < 0.9) this.starterId = 4;    // Charmander
+        else this.starterId = 25;                  // Pikachu
+
+        this.hasShownStarter = false;
+
         window.addEventListener('keydown', (e) => {
             if (this.engine.currentScene !== this) return;
             this.keys[e.key.toLowerCase()] = true;
@@ -36,6 +45,13 @@ class OverworldScene {
     init() {
         this.isTransitioning = false;
         this.keys = {}; // Clear stuck keys
+
+        if (!this.hasShownStarter) {
+            const template = MONSTER_TEMPLATES[this.starterId];
+            this.ui.showDialogue(`Você recebeu um ${template.name} de presente!`);
+            this.hasShownStarter = true;
+        }
+
         console.log("Mundo Expandido Inicializado!");
     }
 
@@ -206,17 +222,11 @@ class OverworldScene {
     }
 
     startBattle(isTallGrass = false) {
-        // Randomized starter logic: 30% Bulbasaur, 30% Squirtle, 30% Charmander, 10% Pikachu
-        const rand = Math.random();
-        let starterId;
-        if (rand < 0.3) starterId = 1;      // Bulbasaur
-        else if (rand < 0.6) starterId = 7; // Squirtle
-        else if (rand < 0.9) starterId = 4; // Charmander
-        else starterId = 25;               // Pikachu
+        const template = MONSTER_TEMPLATES[this.starterId];
 
-        const template = MONSTER_TEMPLATES[starterId];
-        // Create full monster instance from template (includes 150 HP balance)
-        const p1 = new Monster(starterId, template.name, template, "Adamant", "None");
+        // Random nature/ability for the persistent starter in each battle (or could be persistent too)
+        // Let's keep the species persistent as the "starter".
+        const p1 = new Monster(this.starterId, template.name, template, "Adamant", "None");
         const e1 = Monster.createRandom(isTallGrass);
 
         console.log(`Battle started! You: ${p1.name} vs Enemy: ${e1.name}`);
