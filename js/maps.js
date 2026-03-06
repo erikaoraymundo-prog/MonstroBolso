@@ -128,63 +128,97 @@ export class TileMap {
         ctx.save();
         ctx.translate(x, y);
 
-        ctx.fillStyle = baseColor;
+        // Base Tile with subtle gradient
+        const grd = ctx.createLinearGradient(0, 0, 0, TILE_SIZE);
+        grd.addColorStop(0, this.adjustColor(baseColor, 10));
+        grd.addColorStop(1, this.adjustColor(baseColor, -10));
+        ctx.fillStyle = grd;
         ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
 
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        // Highlight/Shadow borders
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
         ctx.fillRect(0, 0, TILE_SIZE, 1);
         ctx.fillRect(0, 0, 1, TILE_SIZE);
-        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.fillRect(0, TILE_SIZE - 1, TILE_SIZE, 1);
         ctx.fillRect(TILE_SIZE - 1, 0, 1, TILE_SIZE);
 
         if (id === 1) { // Grass
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            for (let i = 0; i < 4; i++) {
+                const seed = (gx * 13 + gy * 7 + i) % 100;
+                const rx = (seed / 100) * (TILE_SIZE - 4);
+                const ry = ((seed * 3 % 100) / 100) * (TILE_SIZE - 4);
+                ctx.fillRect(rx, ry, 2, 2);
+            }
+            // Tiny grass blades
+            ctx.strokeStyle = 'rgba(46, 204, 113, 0.8)';
+            ctx.lineWidth = 1;
             for (let i = 0; i < 2; i++) {
-                const rx = (Math.sin(gx * 7 + gy + i) * 0.5 + 0.5) * (TILE_SIZE - 4);
-                const ry = (Math.cos(gy * 3 + gx + i) * 0.5 + 0.5) * (TILE_SIZE - 4);
-                ctx.fillRect(rx, ry, 2, 4);
+                const ox = (Math.sin(gx + i) * 0.5 + 0.5) * TILE_SIZE;
+                const oy = (Math.cos(gy + i) * 0.5 + 0.5) * TILE_SIZE;
+                ctx.beginPath();
+                ctx.moveTo(ox, oy);
+                ctx.lineTo(ox - 2, oy - 4);
+                ctx.stroke();
             }
         } else if (id === 2) { // Tall Grass
+            const time = Date.now() * 0.002;
             ctx.fillStyle = '#1e8449';
             for (let i = 0; i < 3; i++) {
                 const ox = 4 + i * 10;
+                const sway = Math.sin(time + gx + i) * 3;
                 ctx.beginPath();
                 ctx.moveTo(ox, TILE_SIZE);
-                ctx.lineTo(ox - 3, TILE_SIZE - 20);
-                ctx.lineTo(ox + 3, TILE_SIZE - 20);
+                ctx.quadraticCurveTo(ox + sway, TILE_SIZE - 15, ox + sway, TILE_SIZE - 25);
+                ctx.lineTo(ox + 4 + sway, TILE_SIZE - 25);
+                ctx.quadraticCurveTo(ox + 4 + sway, TILE_SIZE - 15, ox + 6, TILE_SIZE);
                 ctx.fill();
             }
         } else if (id === 3 || id === 4) { // Water
             const time = Date.now() * 0.001;
-            ctx.fillStyle = 'rgba(255,255,255,0.15)';
-            const waveX = Math.sin(time + gx) * 8;
-            ctx.fillRect(TILE_SIZE / 2 + waveX - 8, TILE_SIZE / 2, 16, 2);
+            // Water glisten
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            const waveX = Math.sin(time + gx * 0.5) * 10;
+            const waveY = Math.cos(time + gy * 0.5) * 5;
+            ctx.beginPath();
+            ctx.ellipse(TILE_SIZE / 2 + waveX, TILE_SIZE / 2 + waveY, 8, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Depth detail
+            if (id === 4) {
+                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                ctx.beginPath(); ctx.arc(TILE_SIZE / 2, TILE_SIZE / 2, 10, 0, Math.PI * 2); ctx.fill();
+            }
         } else if (id === 6) { // Flowers
+            const anim = Math.sin(Date.now() * 0.002 + gx) * 2;
             ctx.fillStyle = '#145a32';
             ctx.fillRect(TILE_SIZE / 2 - 1, TILE_SIZE / 2, 2, 10);
             ctx.fillStyle = '#ec7063';
             for (let i = 0; i < 5; i++) {
                 ctx.save();
-                ctx.translate(TILE_SIZE / 2, TILE_SIZE / 2);
+                ctx.translate(TILE_SIZE / 2, TILE_SIZE / 2 + anim);
                 ctx.rotate(i * Math.PI * 2 / 5 + Date.now() * 0.001);
                 ctx.beginPath(); ctx.ellipse(6, 0, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
                 ctx.restore();
             }
             ctx.fillStyle = '#f4d03f';
-            ctx.beginPath(); ctx.arc(TILE_SIZE / 2, TILE_SIZE / 2, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(TILE_SIZE / 2, TILE_SIZE / 2 + anim, 3, 0, Math.PI * 2); ctx.fill();
         } else if (id === 5 || id === 9) { // Wall/Rock
             ctx.fillStyle = id === 9 ? '#34495e' : '#95a5a6';
             ctx.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-            ctx.lineWidth = 1;
+            // Cracks
+            ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.moveTo(2, 2); ctx.lineTo(10, 8); ctx.lineTo(8, 15);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
             ctx.strokeRect(2, 2, TILE_SIZE - 4, TILE_SIZE - 4);
         } else if (id === 7 || id === 8) { // Path
-            ctx.fillStyle = 'rgba(0,0,0,0.1)';
-            for (let i = 0; i < 5; i++) {
-                const px = (Math.sin(gx * gy + i) * 0.5 + 0.5) * TILE_SIZE;
-                const py = (Math.cos(gx + gy + i) * 0.5 + 0.5) * TILE_SIZE;
-                ctx.fillRect(px, py, 1, 1);
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            for (let i = 0; i < 3; i++) {
+                const px = ((gx * 3 + i) % 5) * 6;
+                const py = ((gy * 7 + i) % 5) * 6;
+                ctx.beginPath(); ctx.arc(px, py, 2, 0, Math.PI * 2); ctx.fill();
             }
         }
 
@@ -193,10 +227,21 @@ export class TileMap {
 
     getTileColor(id) {
         const colors = {
-            1: '#2ecc71', 2: '#27ae60', 3: '#3498db', 4: '#2980b9',
-            5: '#7f8c8d', 6: '#f1c40f', 7: '#edbb99', 8: '#a04000', 9: '#2c3e50'
+            1: '#27ae60', 2: '#1e8449', 3: '#3498db', 4: '#2874a6',
+            5: '#7f8c8d', 6: '#27ae60', 7: '#edbb99', 8: '#d35400', 9: '#2c3e50'
         };
         return colors[id] || '#000';
+    }
+
+    adjustColor(hex, amount) {
+        let col = hex.replace('#', '');
+        let r = parseInt(col.substring(0, 2), 16) + amount;
+        let g = parseInt(col.substring(2, 4), 16) + amount;
+        let b = parseInt(col.substring(4, 6), 16) + amount;
+        r = Math.max(0, Math.min(255, r));
+        g = Math.max(0, Math.min(255, g));
+        b = Math.max(0, Math.min(255, b));
+        return `rgb(${r},${g},${b})`;
     }
 }
 
@@ -270,23 +315,51 @@ export class Player {
             ctx.fill();
         });
 
-        const bounce = Math.abs(Math.sin(this.frame)) * 6;
-        const sway = Math.sin(this.frame) * 3;
+        const bounce = Math.abs(Math.sin(this.frame)) * 4;
+        const sway = Math.sin(this.frame) * 4;
 
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.beginPath(); ctx.ellipse(x + TILE_SIZE / 2, y + TILE_SIZE - 2, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+        // Dynamic Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath(); ctx.ellipse(x + TILE_SIZE / 2, y + TILE_SIZE - 2, 14 - bounce, 7 - bounce / 2, 0, 0, Math.PI * 2); ctx.fill();
 
         ctx.save();
-        ctx.translate(x + TILE_SIZE / 2, y + TILE_SIZE - 2 - bounce);
+        ctx.translate(x + TILE_SIZE / 2, y + TILE_SIZE - 10 - bounce);
 
-        ctx.fillStyle = '#2e86c1'; ctx.fillRect(-8, -10, 6, 10); ctx.fillRect(2, -10, 6, 10);
-        ctx.fillStyle = '#e74c3c'; ctx.rotate(sway * 0.02); ctx.fillRect(-10, -28, 20, 18);
-        ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(-10, -20, 20, 2);
-        ctx.fillStyle = '#f5b7b1'; ctx.fillRect(-14, -26, 4, 12); ctx.fillRect(10, -26, 4, 12);
-        ctx.beginPath(); ctx.arc(0, -36, 10, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(0, -42, 10, Math.PI, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-12, -42, 24, 2);
-        ctx.fillStyle = '#000'; ctx.fillRect(-4, -38, 2, 3); ctx.fillRect(2, -38, 2, 3);
+        // Legs
+        ctx.fillStyle = '#21618c';
+        ctx.fillRect(-7, 0, 6, 12); ctx.fillRect(1, 0, 6, 12);
+
+        // Torso (Shirt with detail)
+        ctx.fillStyle = '#e74c3c';
+        ctx.rotate(sway * 0.02);
+        ctx.roundRect(-11, -22, 22, 22, 4); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillRect(-11, -12, 22, 1); // Belt line
+
+        // Arms
+        ctx.fillStyle = '#f5b7b1';
+        const armSway = Math.cos(this.frame) * 5;
+        ctx.fillRect(-15, -20 + armSway, 5, 12);
+        ctx.fillRect(10, -20 - armSway, 5, 12);
+
+        // Backpack
+        ctx.fillStyle = '#1b4f72';
+        ctx.roundRect(-8, -20, 16, 14, 3); ctx.fill();
+
+        // Head
+        ctx.translate(0, -26);
+        ctx.fillStyle = '#f5b7b1';
+        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+
+        // Hair (Detailed cap)
+        ctx.fillStyle = '#c0392b';
+        ctx.beginPath(); ctx.arc(0, -3, 12, Math.PI, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-14, -4, 28, 4); // Brim
+
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(-4, 2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, 2, 2, 0, Math.PI * 2); ctx.fill();
 
         ctx.restore();
     }

@@ -274,57 +274,116 @@ export class BattleScene {
     }
 
     drawBackground(ctx) {
-        const grd = ctx.createLinearGradient(0, 0, 0, 600); grd.addColorStop(0, "#85c1e9"); grd.addColorStop(0.5, "#d4e6f1"); grd.addColorStop(1, "#27ae60");
+        const grd = ctx.createLinearGradient(0, 0, 0, 600);
+        grd.addColorStop(0, "#2e86c1");
+        grd.addColorStop(0.5, "#85c1e9");
+        grd.addColorStop(1, "#1d8348");
         ctx.fillStyle = grd; ctx.fillRect(0, 0, 800, 600);
-        ctx.fillStyle = "rgba(0,0,0,0.1)"; ctx.beginPath(); ctx.ellipse(180, 450, 120, 40, 0, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(620, 200, 100, 30, 0, 0, Math.PI * 2); ctx.fill();
+
+        // Distant hills
+        ctx.fillStyle = "rgba(20, 90, 50, 0.3)";
+        ctx.beginPath(); ctx.ellipse(200, 600, 400, 200, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(600, 600, 500, 250, 0, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.beginPath(); ctx.ellipse(180, 450, 140, 50, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(620, 200, 120, 40, 0, 0, Math.PI * 2); ctx.fill();
     }
 
     drawMonster(ctx, monster, x, y, back, flash) {
         ctx.save(); ctx.translate(x, y);
         if (flash > 0) ctx.filter = `brightness(${100 + flash * 5}%) sepia(100%) saturate(1000%) hue-rotate(-50deg)`;
-        const scale = 1 + Math.sin(Date.now() * 0.003) * 0.05;
-        ctx.scale(scale * (back ? 1.2 : 1), (1 / scale) * (back ? 1.2 : 1));
+
+        const time = Date.now() * 0.003;
+        const scale = 1 + Math.sin(time) * 0.03;
+        ctx.scale(scale * (back ? 1.5 : 1), (1 / scale) * (back ? 1.5 : 1));
 
         const template = MONSTER_TEMPLATES[monster.id] || { color: "#ccc", shape: "round", features: [] };
 
-        // Body Shapes
-        ctx.fillStyle = template.color;
-        if (template.shape === "tall") { ctx.beginPath(); ctx.ellipse(0, 0, 35, 55, 0, 0, Math.PI * 2); ctx.fill(); }
-        else if (template.shape === "quad") { ctx.beginPath(); ctx.ellipse(0, 0, 48, 38, 0, 0, Math.PI * 2); ctx.fill(); }
-        else if (template.shape === "long") { ctx.beginPath(); ctx.ellipse(0, 0, 25, 60, 0, 0, Math.PI * 2); ctx.fill(); }
-        else if (template.shape === "wide") { ctx.beginPath(); ctx.ellipse(0, 0, 55, 40, 0, 0, Math.PI * 2); ctx.fill(); }
-        else if (template.shape === "star") {
-            ctx.beginPath(); for (let i = 0; i < 5; i++) { ctx.rotate(Math.PI * 2 / 5); ctx.lineTo(0, -50); ctx.lineTo(15, -15); } ctx.fill();
-        }
-        else { ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill(); } // default round
+        // Monster shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(0, 30, 40, 15, 0, 0, Math.PI * 2); ctx.fill();
 
-        // Features
-        ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 1;
+        // 3D-ish Gradient for body
+        const bodyGrd = ctx.createRadialGradient(-10, -10, 5, 0, 0, 50);
+        bodyGrd.addColorStop(0, this.adjustColor(template.color, 40));
+        bodyGrd.addColorStop(1, template.color);
+        ctx.fillStyle = bodyGrd;
+
+        // Body Shapes with Outline
+        ctx.strokeStyle = this.adjustColor(template.color, -40);
+        ctx.lineWidth = 2;
+
+        if (template.shape === "tall") { ctx.beginPath(); ctx.roundRect(-35, -55, 70, 110, 30); ctx.fill(); ctx.stroke(); }
+        else if (template.shape === "quad") { ctx.beginPath(); ctx.roundRect(-50, -35, 100, 70, 25); ctx.fill(); ctx.stroke(); }
+        else if (template.shape === "long") { ctx.beginPath(); ctx.roundRect(-25, -60, 50, 120, 20); ctx.fill(); ctx.stroke(); }
+        else if (template.shape === "wide") { ctx.beginPath(); ctx.roundRect(-60, -40, 120, 80, 20); ctx.fill(); ctx.stroke(); }
+        else if (template.shape === "star") {
+            ctx.beginPath(); for (let i = 0; i < 5; i++) { ctx.rotate(Math.PI * 2 / 5); ctx.lineTo(0, -55); ctx.lineTo(15, -15); } ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+        else { ctx.beginPath(); ctx.arc(0, 0, 45, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+
+        // Features Detail
         template.features?.forEach(feat => {
-            if (feat === "bulb") { ctx.fillStyle = "#58d68d"; ctx.beginPath(); ctx.arc(0, -35, 30, 0, Math.PI * 2); ctx.fill(); }
-            else if (feat === "flame") { ctx.fillStyle = "#e67e22"; ctx.beginPath(); ctx.moveTo(25, 15); ctx.quadraticCurveTo(60, 40, 50, -40); ctx.fill(); ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(50, -45, 10 + Math.random() * 5, 0, Math.PI * 2); ctx.fill(); }
-            else if (feat === "shell") { ctx.fillStyle = "#935116"; ctx.beginPath(); ctx.ellipse(0, 5, 30, 35, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-            else if (feat === "wings") { ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.beginPath(); ctx.ellipse(-40, -20, 20, 40, Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(40, -20, 20, 40, -Math.PI / 4, 0, Math.PI * 2); ctx.fill(); }
-            else if (feat === "ears") { ctx.fillStyle = template.color; ctx.beginPath(); ctx.ellipse(-25, -45, 10, 25, -Math.PI / 6, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(25, -45, 10, 25, Math.PI / 6, 0, Math.PI * 2); ctx.fill(); }
-            else if (feat === "horn") { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(-10, -60); ctx.lineTo(10, -60); ctx.fill(); }
-            else if (feat === "gas") { ctx.filter = "blur(10px)"; ctx.fillStyle = "rgba(128,0,128,0.4)"; ctx.beginPath(); ctx.arc(0, 0, 60, 0, Math.PI * 2); ctx.fill(); ctx.filter = "none"; }
-            else if (feat === "beak") { ctx.fillStyle = "#f4d03f"; ctx.beginPath(); ctx.moveTo(-5, -20); ctx.lineTo(0, -10); ctx.lineTo(5, -20); ctx.fill(); }
-            else if (feat === "bolt_tail") { ctx.strokeStyle = "#f1c40f"; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(20, 10); ctx.lineTo(40, -10); ctx.lineTo(30, -5); ctx.lineTo(50, -25); ctx.stroke(); }
+            ctx.lineWidth = 1;
+            if (feat === "bulb") {
+                const g = ctx.createRadialGradient(0, -45, 5, 0, -45, 35);
+                g.addColorStop(0, "#82e0aa"); g.addColorStop(1, "#27ae60");
+                ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -40, 35, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = "#1d8348"; ctx.stroke();
+            }
+            else if (feat === "flame") {
+                const fTime = Date.now() * 0.01;
+                ctx.fillStyle = "#e67e22";
+                for (let i = 0; i < 3; i++) {
+                    const fx = 40 + i * 5;
+                    const fy = Math.sin(fTime + i) * 10;
+                    ctx.beginPath(); ctx.arc(fx, fy, 15 - i * 3, 0, Math.PI * 2); ctx.fill();
+                }
+                ctx.fillStyle = "#f1c40f"; ctx.beginPath(); ctx.arc(55, Math.sin(fTime) * 5, 8, 0, Math.PI * 2); ctx.fill();
+            }
+            else if (feat === "shell") {
+                ctx.fillStyle = "#9c640c"; ctx.beginPath(); ctx.ellipse(0, 5, 35, 40, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.strokeRect(-20, -10, 40, 20);
+            }
+            else if (feat === "bolt_tail") {
+                ctx.strokeStyle = "#f4d03f"; ctx.lineWidth = 8; ctx.lineCap = "round";
+                ctx.beginPath(); ctx.moveTo(30, 20); ctx.lineTo(60, 0); ctx.lineTo(45, 10); ctx.lineTo(80, -30); ctx.stroke();
+            }
+            else if (feat === "leaves") {
+                ctx.fillStyle = "#27ae60";
+                for (let i = 0; i < 3; i++) {
+                    ctx.save(); ctx.rotate(i); ctx.beginPath(); ctx.ellipse(30, 0, 20, 8, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+                }
+            }
         });
 
-        // Eyes
-        ctx.fillStyle = '#fff';
+        // Eyes with depth
         if (!back) {
-            ctx.beginPath(); ctx.ellipse(-15, -15, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(15, -15, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.ellipse(-18, -15, 8, 12, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(18, -15, 8, 12, 0, 0, Math.PI * 2); ctx.fill();
             ctx.fillStyle = '#000';
-            ctx.beginPath(); ctx.arc(-15, -12, 3, 0, Math.PI * 2); ctx.fill();
-            ctx.beginPath(); ctx.arc(15, -12, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-18, -12, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(18, -12, 4, 0, Math.PI * 2); ctx.fill();
+            // Eye shine
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.beginPath(); ctx.arc(-19, -14, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(17, -14, 2, 0, Math.PI * 2); ctx.fill();
         } else {
-            ctx.strokeStyle = "rgba(0,0,0,0.1)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -10, 20, 0, Math.PI, true); ctx.stroke();
+            ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.lineWidth = 3;
+            ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(0, -10, 25, 0, Math.PI, true); ctx.stroke(); ctx.setLineDash([]);
         }
         ctx.restore();
+    }
+
+    adjustColor(hex, amount) {
+        let col = hex.replace('#', '');
+        let r = parseInt(col.substring(0, 2), 16) + amount;
+        let g = parseInt(col.substring(2, 4), 16) + amount;
+        let b = parseInt(col.substring(4, 6), 16) + amount;
+        r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b));
+        const toHex = (n) => n.toString(16).padStart(2, '0');
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     }
 
     drawUIBox(ctx, x, y, w, h) {

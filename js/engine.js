@@ -59,6 +59,16 @@ export class Engine {
                 this.currentScene.render(this.ctx);
             }
 
+            // Day/Night Cycle Overlay (Very subtle color shift)
+            const hour = (new Date()).getHours();
+            if (hour < 6 || hour > 19) { // Night
+                this.ctx.fillStyle = "rgba(21, 67, 96, 0.25)";
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            } else if (hour > 17) { // Evening
+                this.ctx.fillStyle = "rgba(186, 74, 0, 0.15)";
+                this.ctx.fillRect(0, 0, this.width, this.height);
+            }
+
             if (this.transition.active) {
                 this.ctx.fillStyle = `rgba(0,0,0,${this.transition.opacity})`;
                 this.ctx.fillRect(0, 0, this.width, this.height);
