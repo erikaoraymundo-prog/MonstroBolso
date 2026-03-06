@@ -258,5 +258,6 @@ engine.setScene('overworld');
 
 document.getElementById('start-button').addEventListener('click', () => {
     document.getElementById('start-screen').classList.add('hidden');
+    engine.audio.playBGM('assets/audio/Rustboro_City.mp3');
     engine.start();
 });

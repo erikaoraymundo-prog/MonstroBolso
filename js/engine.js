@@ -1,3 +1,5 @@
+import { AudioManager } from './audio.js';
+
 export class Engine {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -8,6 +10,7 @@ export class Engine {
         this.currentScene = null;
         this.lastTime = performance.now();
         this.transition = { active: false, opacity: 0, target: null, mode: 'fade' };
+        this.audio = new AudioManager();
     }
 
     setScene(sceneName) {
